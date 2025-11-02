@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,7 @@ import { CreditCard, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrency } from '@/contexts/CurrencyContext';
-
-// Extend global Window interface for PayPal
-declare global {
-  interface Window {
-    paypal: any;
-  }
-}
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -43,75 +37,9 @@ export function CheckoutModal({
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
   const { formatPrice, currency, exchangeRates } = useCurrency();
-  const paypalRef = useRef<HTMLDivElement>(null);
 
-  // Load PayPal SDK dynamically when modal opens
-  useEffect(() => {
-    if (paymentMethod !== 'paypal' || !isOpen) return;
-
-    // Only load script once
-    if (document.getElementById('paypal-sdk')) return;
-
-    const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD`;
-    script.id = 'paypal-sdk';
-    script.async = true;
-    script.onload = () => {
-      if (window.paypal && paypalRef.current) {
-        window.paypal.Buttons({
-          createOrder: (_data: any, actions: any) => {
-            return actions.order.create({
-              purchase_units: [
-                {
-                  description: `Car rental booking for ${bookingDetails.carName}`,
-                  amount: {
-                    value: bookingDetails.totalAmount.toString(),
-                    currency_code: 'USD',
-                  },
-                },
-              ],
-            });
-          },
-          onApprove: async (_data: any, actions: any) => {
-            const order = await actions.order.capture();
-            console.log('PayPal order:', order);
-
-            // Update Supabase booking record
-            const { error } = await supabase
-              .from('bookings')
-              .update({ payment_status: 'paid' })
-              .eq('id', bookingDetails.id);
-
-            if (error) {
-              console.error('Supabase update failed:', error);
-              toast({
-                title: "Payment Successful but Update Failed",
-                description: "Booking paid, but system didn't update DB. Please contact support.",
-                variant: "destructive",
-              });
-            } else {
-              toast({
-                title: "PayPal Payment Successful!",
-                description: "Your booking has been confirmed via PayPal.",
-              });
-              onPaymentSuccess();
-              onClose();
-            }
-          },
-          onError: (err: any) => {
-            console.error('PayPal error:', err);
-            toast({
-              title: "Payment Failed",
-              description: "PayPal could not process your payment.",
-              variant: "destructive",
-            });
-          }
-        }).render(paypalRef.current);
-      }
-    };
-
-    document.body.appendChild(script);
-  }, [paymentMethod, isOpen, bookingDetails, onPaymentSuccess, onClose, toast]);
+  const eurAmount = (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2);
+  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb';
 
   const handleCardPayment = async () => {
     setProcessing(true);
@@ -266,7 +194,77 @@ export function CheckoutModal({
 
           {/* PayPal Button */}
           {paymentMethod === 'paypal' && (
-            <div ref={paypalRef} className="pt-4" />
+            <div className="pt-4">
+              <PayPalScriptProvider options={{ 
+                clientId: paypalClientId,
+                currency: "EUR",
+                intent: "capture"
+              }}>
+                <PayPalButtons
+                  style={{ layout: "vertical" }}
+                  createOrder={async (data, actions) => {
+                    // Create order via backend edge function
+                    const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
+                      body: {
+                        action: 'create-order',
+                        amount: parseFloat(eurAmount),
+                        bookingId: bookingDetails.id,
+                      },
+                    });
+
+                    if (error || !orderData?.id) {
+                      console.error('Failed to create PayPal order:', error);
+                      toast({
+                        title: "Payment Failed",
+                        description: "Could not create PayPal order.",
+                        variant: "destructive",
+                      });
+                      throw new Error('Failed to create order');
+                    }
+
+                    return orderData.id;
+                  }}
+                  onApprove={async (data, actions) => {
+                    try {
+                      // Capture order via backend edge function
+                      const { data: captureData, error } = await supabase.functions.invoke('paypal-payment', {
+                        body: {
+                          action: 'capture-order',
+                          orderId: data.orderID,
+                          bookingId: bookingDetails.id,
+                        },
+                      });
+
+                      if (error || captureData?.status !== 'COMPLETED') {
+                        throw new Error('Failed to capture payment');
+                      }
+
+                      toast({
+                        title: "PayPal Payment Successful!",
+                        description: "Your booking has been confirmed via PayPal.",
+                      });
+                      onPaymentSuccess();
+                      onClose();
+                    } catch (err) {
+                      console.error('PayPal capture error:', err);
+                      toast({
+                        title: "Payment Failed",
+                        description: "Could not complete PayPal payment.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  onError={(err) => {
+                    console.error('PayPal error:', err);
+                    toast({
+                      title: "Payment Failed",
+                      description: "PayPal could not process your payment.",
+                      variant: "destructive",
+                    });
+                  }}
+                />
+              </PayPalScriptProvider>
+            </div>
           )}
         </div>
       </DialogContent>

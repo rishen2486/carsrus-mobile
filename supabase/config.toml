@@ -1,1 +1,7 @@
 project_id = "pjxhbjaqtwjmbqfpurcp"
+
+[functions.sync-booking]
+verify_jwt = false
+
+[functions.paypal-payment]
+verify_jwt = false
