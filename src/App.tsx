@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import Tours from "./pages/Tours";
@@ -24,24 +24,22 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/cars" element={<Cars />} />
-          <Route path="/tours" element={<Tours />} />
-          <Route path="/attractions" element={<Attractions />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/admin" element={<Dashboard />} />
-          <Route path="/admin/add-car" element={<AddCar />} />
-          <Route path="/admin/cars" element={<CarList />} />
-          <Route path="/admin/edit-car/:id" element={<EditCar />} />
-          <Route path="/booking/:id" element={<Booking />} />
-          <Route path="/booking/:id/confirmation" element={<BookingConfirmation />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/cars" element={<Cars />} />
+        <Route path="/tours" element={<Tours />} />
+        <Route path="/attractions" element={<Attractions />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/admin" element={<Dashboard />} />
+        <Route path="/admin/add-car" element={<AddCar />} />
+        <Route path="/admin/cars" element={<CarList />} />
+        <Route path="/admin/edit-car/:id" element={<EditCar />} />
+        <Route path="/booking/:id" element={<Booking />} />
+        <Route path="/booking/:id/confirmation" element={<BookingConfirmation />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </TooltipProvider>
   </QueryClientProvider>
 );
