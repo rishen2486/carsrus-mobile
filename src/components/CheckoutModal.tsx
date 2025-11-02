@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 // Extend global Window interface for PayPal
 declare global {
@@ -41,6 +42,7 @@ export function CheckoutModal({
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
+  const { formatPrice, currency, exchangeRates } = useCurrency();
   const paypalRef = useRef<HTMLDivElement>(null);
 
   // Load PayPal SDK dynamically when modal opens
@@ -168,8 +170,21 @@ export function CheckoutModal({
                 <span>{bookingDetails.startDate} - {bookingDetails.endDate}</span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                <span>Total:</span>
-                <span>Rs {bookingDetails.totalAmount}</span>
+                <span>Total ({currency}):</span>
+                <span>{formatPrice(bookingDetails.totalAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground mt-1">
+                <span>Total (EUR):</span>
+                <span>€ {(bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground italic mt-1">
+                (EUR amount will be billed on credit card)
+              </p>
+              <div className="flex items-center gap-2 pt-2">
+                <strong>Status:</strong>
+                <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                  Pending Payment
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -244,7 +259,7 @@ export function CheckoutModal({
                 disabled={processing || !cardDetails.name || !cardDetails.number || !cardDetails.expiry || !cardDetails.cvv}
                 className="w-full"
               >
-                {processing ? 'Processing...' : `Pay Rs ${bookingDetails.totalAmount}`}
+                {processing ? 'Processing...' : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)}`}
               </Button>
             </div>
           )}

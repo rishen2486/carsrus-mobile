@@ -7,6 +7,7 @@ import { CheckoutModal } from '@/components/CheckoutModal';
 import Navbar from '@/components/layout/Navbar';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface Booking {
   id: string;
@@ -28,6 +29,7 @@ interface Booking {
 const BookingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { formatPrice, currency, exchangeRates } = useCurrency();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -143,7 +145,13 @@ const BookingPage: React.FC = () => {
                 <p><strong>Drop-off:</strong> {booking.dropoff_location}</p>
                 <p><strong>Dates:</strong> {booking.start_date} → {booking.end_date}</p>
                 <p className="text-lg font-bold">
-                  Total: Rs {booking.total_amount}
+                  Total ({currency}): {formatPrice(booking.total_amount)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Total (EUR): € {(booking.total_amount * exchangeRates.EUR).toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground italic mb-2">
+                  (Amount that will be billed on Credit Card)
                 </p>
                 <div className="flex items-center gap-2">
                   <strong>Status:</strong>

@@ -11,7 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
-import { useCurrency } from '@/contexts/CurrencyContext';
+import { useCurrency, Currency } from '@/contexts/CurrencyContext';
 
 interface Car {
   id: string;
@@ -29,7 +29,7 @@ interface BookingFormProps {
 export function BookingForm({ car, onClose }: BookingFormProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { formatPrice, convertPrice } = useCurrency();
+  const { formatPrice, convertPrice, currency, exchangeRates } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -264,9 +264,16 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
                 </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-primary/20">
-                <span>Total:</span>
+                <span>Total ({currency}):</span>
                 <span className="text-primary">{formatPrice(totalAmount)}</span>
               </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Total (EUR):</span>
+                <span className="font-medium">€ {(totalAmount * exchangeRates.EUR).toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground italic">
+                (Amount that will be billed on Credit Card)
+              </p>
             </div>
           )}
         </CardContent>
