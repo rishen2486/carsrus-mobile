@@ -89,7 +89,11 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const formatPrice = (priceInMUR: number): string => {
     const converted = convertPrice(priceInMUR);
     const symbol = CURRENCY_SYMBOLS[currency];
-    return `${symbol} ${converted.toFixed(2)}`;
+    const formattedAmount = converted.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${symbol} ${formattedAmount}`;
   };
 
   return (

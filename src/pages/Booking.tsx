@@ -147,10 +147,10 @@ const BookingPage: React.FC = () => {
                 <p className="text-lg font-bold">
                   Total ({currency}): {formatPrice(booking.total_amount)}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Total (EUR): € {(booking.total_amount * exchangeRates.EUR).toFixed(2)}
+                <p className="text-lg font-bold mt-1">
+                  Total (EUR): € {(booking.total_amount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-muted-foreground italic mb-2">
+                <p className="text-sm mt-1 mb-2">
                   (Amount that will be billed on Credit Card)
                 </p>
                 <div className="flex items-center gap-2">

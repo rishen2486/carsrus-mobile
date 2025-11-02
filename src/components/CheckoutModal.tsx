@@ -173,11 +173,11 @@ export function CheckoutModal({
                 <span>Total ({currency}):</span>
                 <span>{formatPrice(bookingDetails.totalAmount)}</span>
               </div>
-              <div className="flex justify-between text-sm text-muted-foreground mt-1">
+              <div className="flex justify-between font-bold text-lg mt-1">
                 <span>Total (EUR):</span>
-                <span>€ {(bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)}</span>
+                <span>€ {(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-              <p className="text-xs text-muted-foreground italic mt-1">
+              <p className="text-sm mt-1">
                 (EUR amount will be billed on credit card)
               </p>
               <div className="flex items-center gap-2 pt-2">
@@ -259,7 +259,7 @@ export function CheckoutModal({
                 disabled={processing || !cardDetails.name || !cardDetails.number || !cardDetails.expiry || !cardDetails.cvv}
                 className="w-full"
               >
-                {processing ? 'Processing...' : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)}`}
+                {processing ? 'Processing...' : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </Button>
             </div>
           )}

@@ -34,7 +34,7 @@ const Cars = () => {
   const [sortBy, setSortBy] = useState("price");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState([50, 150]);
+  const [priceRange, setPriceRange] = useState([0, 10000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const { toast } = useToast();
   const location = useLocation();
@@ -116,7 +116,7 @@ const Cars = () => {
   const handleClearFilters = () => {
     setSearchFilters(null);
     setSelectedCategories([]);
-    setPriceRange([50, 150]);
+    setPriceRange([0, 10000]);
     navigate('/cars', { replace: true });
     fetchCars();
   };
@@ -267,14 +267,14 @@ const Cars = () => {
                       <Slider
                         value={priceRange}
                         onValueChange={setPriceRange}
-                        max={200}
-                        min={25}
-                        step={5}
+                        max={10000}
+                        min={0}
+                        step={100}
                         className="w-full"
                       />
                       <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Rs {priceRange[0]}</span>
-                        <span>Rs {priceRange[1]}</span>
+                        <span>Rs {priceRange[0].toLocaleString('en-US')}</span>
+                        <span>Rs {priceRange[1].toLocaleString('en-US')}</span>
                       </div>
                     </div>
 

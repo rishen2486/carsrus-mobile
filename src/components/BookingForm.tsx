@@ -267,12 +267,12 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
                 <span>Total ({currency}):</span>
                 <span className="text-primary">{formatPrice(totalAmount)}</span>
               </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
+              <div className="flex justify-between font-bold text-lg mt-1">
                 <span>Total (EUR):</span>
-                <span className="font-medium">€ {(totalAmount * exchangeRates.EUR).toFixed(2)}</span>
+                <span className="text-primary">€ {(totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-              <p className="text-xs text-muted-foreground italic">
-                (Amount that will be billed on Credit Card)
+              <p className="text-sm mt-1">
+                (EUR amount will be billed on credit card)
               </p>
             </div>
           )}
