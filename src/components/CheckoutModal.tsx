@@ -45,7 +45,9 @@ export function CheckoutModal({
 
   const eurAmount = (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2);
   const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb';
-
+  console.log("PayPal Client ID from env:", import.meta.env.VITE_PAYPAL_CLIENT_ID);
+  console.log("Rendering PayPal buttons with client ID:", paypalClientId);
+  
   const isCardFormValid = cardDetails.name && 
     cardDetails.number && 
     cardDetails.expiry && 
