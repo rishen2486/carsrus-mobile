@@ -94,6 +94,8 @@ export function CheckoutModal({
     }
   };
 
+  console.log("CheckoutModal mount, clientId=", paypalClientId);
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
