@@ -95,6 +95,28 @@ export function CheckoutModal({
   };
 
   console.log("CheckoutModal mount, clientId=", paypalClientId);
+
+    // Fail-safe check: ensure PayPal Client ID is loaded
+  if (!paypalClientId || paypalClientId === 'sb') {
+    console.error(
+      "❌ PayPal Client ID is missing or fallback 'sb' is being used. " +
+      "This means your environment variable VITE_PAYPAL_CLIENT_ID is not loaded correctly from Render."
+    );
+
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md text-center py-10">
+          <DialogHeader>
+            <DialogTitle>Payment Not Configured</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mt-2">
+            The PayPal payment service is temporarily unavailable. Please contact support or try again later.
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
