@@ -239,7 +239,7 @@ export function CheckoutModal({
                 You will be redirected to PayPal to complete your payment securely.
               </p>
               <PayPalScriptProvider options={{ 
-                clientId: paypalClientId,
+                client-Id: paypalClientId,
                 currency: "EUR",
                 intent: "capture"
               }}>
