@@ -37,11 +37,7 @@ export function CheckoutModal({
     number: '', 
     expiry: '', 
     cvv: '', 
-    name: '',
-    billingAddress: '',
-    city: '',
-    postalCode: '',
-    country: ''
+    name: ''
   });
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
@@ -53,11 +49,7 @@ export function CheckoutModal({
   const isCardFormValid = cardDetails.name && 
     cardDetails.number && 
     cardDetails.expiry && 
-    cardDetails.cvv &&
-    cardDetails.billingAddress &&
-    cardDetails.city &&
-    cardDetails.postalCode &&
-    cardDetails.country;
+    cardDetails.cvv;
 
   const handleCardPayment = async () => {
     if (!isCardFormValid) {
@@ -225,48 +217,6 @@ export function CheckoutModal({
                     required
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="billingAddress">Billing Address *</Label>
-                <Input
-                  id="billingAddress"
-                  value={cardDetails.billingAddress}
-                  onChange={(e) => setCardDetails(prev => ({ ...prev, billingAddress: e.target.value }))}
-                  placeholder="123 Main Street"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={cardDetails.city}
-                    onChange={(e) => setCardDetails(prev => ({ ...prev, city: e.target.value }))}
-                    placeholder="Port Louis"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Postal Code *</Label>
-                  <Input
-                    id="postalCode"
-                    value={cardDetails.postalCode}
-                    onChange={(e) => setCardDetails(prev => ({ ...prev, postalCode: e.target.value }))}
-                    placeholder="12345"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="country">Country *</Label>
-                <Input
-                  id="country"
-                  value={cardDetails.country}
-                  onChange={(e) => setCardDetails(prev => ({ ...prev, country: e.target.value }))}
-                  placeholder="Mauritius"
-                  required
-                />
               </div>
               <Button
                 onClick={handleCardPayment}
