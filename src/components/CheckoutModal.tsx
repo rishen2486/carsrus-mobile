@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,9 +45,21 @@ export function CheckoutModal({
 
   const eurAmount = (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2);
   const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb';
-  console.log("PayPal Client ID from env:", import.meta.env.VITE_PAYPAL_CLIENT_ID);
-  console.log("Rendering PayPal buttons with client ID:", paypalClientId);
-  
+
+  // --- Debugging + verification ---
+  useEffect(() => {
+    console.log("✅ CheckoutModal mounted");
+    console.log("PayPal Client ID from env:", import.meta.env.VITE_PAYPAL_CLIENT_ID);
+    console.log("Using PayPal Client ID:", paypalClientId);
+
+    const existingScript = document.querySelector("script[src*='paypal.com/sdk/js']");
+    if (existingScript) {
+      console.log("✅ PayPal SDK already loaded:", existingScript.getAttribute("src"));
+    } else {
+      console.warn("⚠️ PayPal SDK not yet loaded at mount");
+    }
+  }, [paypalClientId]);
+
   const isCardFormValid = cardDetails.name && 
     cardDetails.number && 
     cardDetails.expiry && 
@@ -94,184 +106,162 @@ export function CheckoutModal({
     }
   };
 
-  console.log("CheckoutModal mount, clientId=", paypalClientId);
+  console.log("CheckoutModal render, clientId=", paypalClientId);
 
-    // Fail-safe check: ensure PayPal Client ID is loaded
-  if (!paypalClientId || paypalClientId === 'sb') {
-    console.error(
-      "❌ PayPal Client ID is missing or fallback 'sb' is being used. " +
-      "This means your environment variable VITE_PAYPAL_CLIENT_ID is not loaded correctly from Render."
-    );
-
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md text-center py-10">
-          <DialogHeader>
-            <DialogTitle>Payment Not Configured</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground mt-2">
-            The PayPal payment service is temporarily unavailable. Please contact support or try again later.
-          </p>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Complete Your Booking</DialogTitle>
-        </DialogHeader>
+    <PayPalScriptProvider
+      options={{
+        "client-id": paypalClientId,
+        currency: "EUR",
+        intent: "capture",
+      }}
+    >
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Your Booking</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Booking Summary */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Booking Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Car:</span>
-                <span className="font-medium">{bookingDetails.carName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Pickup:</span>
-                <span>{bookingDetails.pickupLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Drop-off:</span>
-                <span>{bookingDetails.dropoffLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Dates:</span>
-                <span>{bookingDetails.startDate} - {bookingDetails.endDate}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                <span>Total ({currency}):</span>
-                <span>{formatPrice(bookingDetails.totalAmount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg mt-1">
-                <span>Total (EUR):</span>
-                <span>€ {(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <p className="text-sm mt-1">
-                (EUR amount will be billed on credit card)
-              </p>
-              <div className="flex items-center gap-2 pt-2">
-                <strong>Status:</strong>
-                <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                  Pending Payment
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {/* Booking Summary */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Booking Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Car:</span>
+                  <span className="font-medium">{bookingDetails.carName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pickup:</span>
+                  <span>{bookingDetails.pickupLocation}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Drop-off:</span>
+                  <span>{bookingDetails.dropoffLocation}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Dates:</span>
+                  <span>{bookingDetails.startDate} - {bookingDetails.endDate}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total ({currency}):</span>
+                  <span>{formatPrice(bookingDetails.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg mt-1">
+                  <span>Total (EUR):</span>
+                  <span>€ {(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <p className="text-sm mt-1">
+                  (EUR amount will be billed on credit card)
+                </p>
+                <div className="flex items-center gap-2 pt-2">
+                  <strong>Status:</strong>
+                  <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                    Pending Payment
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Payment Method */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Payment Method</Label>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="credit-card" id="credit-card" />
-                <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Credit Card
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="debit-card" id="debit-card" />
-                <Label htmlFor="debit-card" className="flex items-center cursor-pointer">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Debit Card
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="paypal" id="paypal" />
-                <Label htmlFor="paypal" className="flex items-center cursor-pointer">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  PayPal Account
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Card Form */}
-          {(paymentMethod === 'credit-card' || paymentMethod === 'debit-card') && (
+            {/* Payment Method */}
             <div className="space-y-3">
-              <div>
-                <Label htmlFor="cardName">Cardholder Name *</Label>
-                <Input
-                  id="cardName"
-                  value={cardDetails.name}
-                  onChange={(e) => setCardDetails(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="cardNumber">Card Number *</Label>
-                <Input
-                  id="cardNumber"
-                  value={cardDetails.number}
-                  onChange={(e) => setCardDetails(prev => ({ ...prev, number: e.target.value }))}
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="expiry">Expiry Date *</Label>
-                  <Input
-                    id="expiry"
-                    value={cardDetails.expiry}
-                    onChange={(e) => setCardDetails(prev => ({ ...prev, expiry: e.target.value }))}
-                    placeholder="MM/YY"
-                    maxLength={5}
-                    required
-                  />
+              <Label className="text-base font-medium">Payment Method</Label>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="credit-card" id="credit-card" />
+                  <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Credit Card
+                  </Label>
                 </div>
-                <div>
-                  <Label htmlFor="cvv">CVV *</Label>
-                  <Input
-                    id="cvv"
-                    value={cardDetails.cvv}
-                    onChange={(e) => setCardDetails(prev => ({ ...prev, cvv: e.target.value }))}
-                    placeholder="123"
-                    maxLength={4}
-                    required
-                  />
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="debit-card" id="debit-card" />
+                  <Label htmlFor="debit-card" className="flex items-center cursor-pointer">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Debit Card
+                  </Label>
                 </div>
-              </div>
-              <Button
-                onClick={handleCardPayment}
-                disabled={processing || !isCardFormValid}
-                className="w-full"
-              >
-                {processing ? 'Processing...' : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              </Button>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="paypal" id="paypal" />
+                  <Label htmlFor="paypal" className="flex items-center cursor-pointer">
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    PayPal Account
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
-          )}
 
-          {/* PayPal Button */}
-          {paymentMethod === 'paypal' && (
-            <div className="pt-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                You will be redirected to PayPal to complete your payment securely.
-              </p>
-              <PayPalScriptProvider options={{ 
-                "client-id": paypalClientId,
-                currency: "EUR",
-                intent: "capture"
-              }}>
+            {/* Card Form */}
+            {(paymentMethod === 'credit-card' || paymentMethod === 'debit-card') && (
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="cardName">Cardholder Name *</Label>
+                  <Input
+                    id="cardName"
+                    value={cardDetails.name}
+                    onChange={(e) => setCardDetails(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cardNumber">Card Number *</Label>
+                  <Input
+                    id="cardNumber"
+                    value={cardDetails.number}
+                    onChange={(e) => setCardDetails(prev => ({ ...prev, number: e.target.value }))}
+                    placeholder="1234 5678 9012 3456"
+                    maxLength={19}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="expiry">Expiry Date *</Label>
+                    <Input
+                      id="expiry"
+                      value={cardDetails.expiry}
+                      onChange={(e) => setCardDetails(prev => ({ ...prev, expiry: e.target.value }))}
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cvv">CVV *</Label>
+                    <Input
+                      id="cvv"
+                      value={cardDetails.cvv}
+                      onChange={(e) => setCardDetails(prev => ({ ...prev, cvv: e.target.value }))}
+                      placeholder="123"
+                      maxLength={4}
+                      required
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleCardPayment}
+                  disabled={processing || !isCardFormValid}
+                  className="w-full"
+                >
+                  {processing ? 'Processing...' : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </Button>
+              </div>
+            )}
+
+            {/* PayPal Button */}
+            {paymentMethod === 'paypal' && (
+              <div className="pt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  You will be redirected to PayPal to complete your payment securely.
+                </p>
                 <PayPalButtons
                   style={{ layout: "vertical" }}
-                  createOrder={async (data, actions) => {
+                  createOrder={async () => {
                     try {
                       console.log('Creating PayPal order...', { amount: eurAmount, bookingId: bookingDetails.id });
-                      
-                      // Create order via backend edge function
                       const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
                         body: {
                           action: 'create-order',
@@ -279,41 +269,22 @@ export function CheckoutModal({
                           bookingId: bookingDetails.id,
                         },
                       });
-
                       console.log('PayPal order response:', { orderData, error });
-
-                      if (error) {
-                        console.error('Failed to create PayPal order:', error);
-                        toast({
-                          title: "Payment Failed",
-                          description: `Could not create PayPal order: ${error.message}`,
-                          variant: "destructive",
-                        });
-                        throw new Error('Failed to create order');
-                      }
-
-                      if (!orderData?.id) {
-                        console.error('No order ID returned:', orderData);
-                        toast({
-                          title: "Payment Failed",
-                          description: "Could not create PayPal order. Please try again.",
-                          variant: "destructive",
-                        });
-                        throw new Error('No order ID returned');
-                      }
-
-                      console.log('PayPal order created successfully:', orderData.id);
+                      if (error || !orderData?.id) throw new Error(error?.message || 'Order creation failed');
                       return orderData.id;
                     } catch (err) {
                       console.error('Error in createOrder:', err);
+                      toast({
+                        title: "Payment Failed",
+                        description: err instanceof Error ? err.message : "Could not create PayPal order.",
+                        variant: "destructive",
+                      });
                       throw err;
                     }
                   }}
-                  onApprove={async (data, actions) => {
+                  onApprove={async (data) => {
                     try {
                       console.log('Capturing PayPal order...', { orderId: data.orderID });
-                      
-                      // Capture order via backend edge function
                       const { data: captureData, error } = await supabase.functions.invoke('paypal-payment', {
                         body: {
                           action: 'capture-order',
@@ -321,20 +292,8 @@ export function CheckoutModal({
                           bookingId: bookingDetails.id,
                         },
                       });
-
                       console.log('PayPal capture response:', { captureData, error });
-
-                      if (error) {
-                        console.error('Failed to capture payment:', error);
-                        throw new Error(`Failed to capture payment: ${error.message}`);
-                      }
-
-                      if (captureData?.status !== 'COMPLETED') {
-                        console.error('Payment not completed:', captureData);
-                        throw new Error('Payment was not completed');
-                      }
-
-                      console.log('PayPal payment completed successfully');
+                      if (error || captureData?.status !== 'COMPLETED') throw new Error(error?.message || 'Payment not completed');
                       toast({
                         title: "PayPal Payment Successful!",
                         description: "Your booking has been confirmed via PayPal.",
@@ -366,11 +325,11 @@ export function CheckoutModal({
                     });
                   }}
                 />
-              </PayPalScriptProvider>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </PayPalScriptProvider>
   );
 }
