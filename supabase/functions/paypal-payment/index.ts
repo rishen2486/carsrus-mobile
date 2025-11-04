@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const PAYPAL_CLIENT_ID = Deno.env.get('PAYPAL_CLIENT_ID')!;
 const PAYPAL_CLIENT_SECRET = Deno.env.get('PAYPAL_CLIENT_SECRET')!;
-const PAYPAL_API = "https://api-m.sandbox.paypal.com"; // Change to api-m.paypal.com for live
+const PAYPAL_API = "https://api-m.sandbox.paypal.com";
 
 async function generateAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
@@ -25,7 +25,6 @@ async function generateAccessToken() {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -40,7 +39,6 @@ serve(async (req) => {
     console.log(`PayPal payment action: ${action}`, { amount, bookingId, orderId });
 
     if (action === 'create-order') {
-      // Create PayPal order
       const accessToken = await generateAccessToken();
       const response = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
         method: "POST",
@@ -54,13 +52,13 @@ serve(async (req) => {
             {
               amount: {
                 currency_code: "EUR",
-                value: amount.toFixed(2),
+                value: Number(amount).toFixed(2),
               },
               description: `Car rental booking #${bookingId}`,
             },
           ],
           application_context: {
-            brand_name: "Car Rental Service",
+            brand_name: "RoadReady Rent",
             landing_page: "NO_PREFERENCE",
             user_action: "PAY_NOW",
           },
@@ -68,15 +66,14 @@ serve(async (req) => {
       });
 
       const order = await response.json();
-      console.log('PayPal order created:', order);
+      console.log("PayPal order created:", order);
 
       return new Response(JSON.stringify(order), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    } 
-    
+    }
+
     if (action === 'capture-order') {
-      // Capture PayPal order
       const accessToken = await generateAccessToken();
       const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`, {
         method: "POST",
@@ -87,21 +84,15 @@ serve(async (req) => {
       });
 
       const captureData = await response.json();
-      console.log('PayPal order captured:', captureData);
+      console.log("PayPal order captured:", captureData);
 
-      // Update booking status in database
-      if (captureData.status === 'COMPLETED') {
+      if (captureData.status === "COMPLETED") {
         const { error } = await supabase
-          .from('bookings')
-          .update({ payment_status: 'paid' })
-          .eq('id', bookingId);
+          .from("bookings")
+          .update({ payment_status: "paid" })
+          .eq("id", bookingId);
 
-        if (error) {
-          console.error('Failed to update booking:', error);
-          throw error;
-        }
-
-        console.log(`Booking ${bookingId} marked as paid`);
+        if (error) throw error;
       }
 
       return new Response(JSON.stringify(captureData), {
@@ -109,16 +100,16 @@ serve(async (req) => {
       });
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: "Invalid action" }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
-    console.error('PayPal payment error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("PayPal payment error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
