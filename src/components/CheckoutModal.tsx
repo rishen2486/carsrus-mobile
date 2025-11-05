@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreditCard, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,18 +88,19 @@ export function CheckoutModal({
   return (
     <PayPalScriptProvider
       options={{
-        'client-id': paypalClientId,
+        clientId: paypalClientId,
         currency: 'EUR',
         intent: 'capture',
       }}
     >
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Complete Your Booking</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+            <div className="space-y-4">
             {/* Booking Summary */}
             <Card>
               <CardHeader className="pb-3">
@@ -309,7 +311,8 @@ export function CheckoutModal({
                 />
               </div>
             )}
-          </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </PayPalScriptProvider>
