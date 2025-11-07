@@ -90,6 +90,10 @@ export function CheckoutModal({
         clientId: paypalClientId,
         currency: 'EUR',
         intent: 'capture',
+        components: 'buttons',
+        // 👇 Add Advanced Card Fields support (required for card-only mode)
+        'enable-funding': 'card',
+        'disable-funding': 'credit,p24,giropay,sofort',
       }}
     >
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -163,88 +167,18 @@ export function CheckoutModal({
                 </RadioGroup>
               </div>
 
-              {/* Card Payment */}
-              {(paymentMethod === 'credit-card' || paymentMethod === 'debit-card') && (
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="cardName">Cardholder Name *</Label>
-                    <Input
-                      id="cardName"
-                      value={cardDetails.name}
-                      onChange={(e) =>
-                        setCardDetails((prev) => ({ ...prev, name: e.target.value }))
-                      }
-                      placeholder="John Doe"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cardNumber">Card Number *</Label>
-                    <Input
-                      id="cardNumber"
-                      value={cardDetails.number}
-                      onChange={(e) =>
-                        setCardDetails((prev) => ({ ...prev, number: e.target.value }))
-                      }
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="expiry">Expiry Date *</Label>
-                      <Input
-                        id="expiry"
-                        value={cardDetails.expiry}
-                        onChange={(e) =>
-                          setCardDetails((prev) => ({ ...prev, expiry: e.target.value }))
-                        }
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cvv">CVV *</Label>
-                      <Input
-                        id="cvv"
-                        value={cardDetails.cvv}
-                        onChange={(e) =>
-                          setCardDetails((prev) => ({ ...prev, cvv: e.target.value }))
-                        }
-                        placeholder="123"
-                        maxLength={4}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleCardPayment}
-                    disabled={processing || !isCardFormValid}
-                    className="w-full"
-                  >
-                    {processing
-                      ? 'Processing...'
-                      : `Pay € ${(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString(
-                          'en-US',
-                          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                        )}`}
-                  </Button>
-                </div>
-              )}
-
               {/* PayPal Payment */}
               {paymentMethod === 'paypal' && (
                 <div className="pt-4">
                   <p className="text-sm text-muted-foreground mb-3">
-                    You will be redirected to PayPal to complete your payment securely.
+                    Pay securely using PayPal or your card. No shipping details required.
                   </p>
+
                   <PayPalButtons
                     style={{ layout: 'vertical' }}
                     createOrder={async () => {
                       try {
-                        console.log('Creating PayPal order (no shipping)...');
+                        console.log('Creating PayPal order (no billing/shipping)...');
                         const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
                           body: {
                             action: 'create-order',
@@ -256,11 +190,9 @@ export function CheckoutModal({
                               brand_name: 'RoadReady Rent',
                             },
                             payer: {
-                              name: {
-                                given_name: 'Richard',
-                                surname: 'Antoine',
+                              address: {
+                                country_code: 'MU', // 🇲🇺 Default country set to Mauritius
                               },
-                              email_address: 'buyer@example.com',
                             },
                           },
                         });
