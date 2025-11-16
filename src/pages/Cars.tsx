@@ -23,6 +23,7 @@ interface Car {
   description: string;
   features?: string[];
   available: boolean;
+  country?: string;
 }
 
 const Cars = () => {
