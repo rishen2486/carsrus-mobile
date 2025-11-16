@@ -232,6 +232,24 @@ export type Database = {
         }
         Relationships: []
       }
+      Location: {
+        Row: {
+          Country: string | null
+          id: number
+          Region: string | null
+        }
+        Insert: {
+          Country?: string | null
+          id?: number
+          Region?: string | null
+        }
+        Update: {
+          Country?: string | null
+          id?: number
+          Region?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
