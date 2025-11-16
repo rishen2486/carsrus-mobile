@@ -83,7 +83,24 @@ const Cars = () => {
         return;
       }
 
-      setCars(carsData || []);
+      let availableCars = carsData || [];
+
+      // Filter out cars with conflicting bookings if dates are provided
+      if (filters?.pickupDate && filters?.returnDate) {
+        const { data: bookings, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('car_id, start_date, end_date')
+          .or(`and(start_date.lte.${filters.returnDate},end_date.gte.${filters.pickupDate})`);
+
+        if (bookingsError) {
+          console.error('Error fetching bookings:', bookingsError);
+        } else if (bookings && bookings.length > 0) {
+          const bookedCarIds = new Set(bookings.map(b => b.car_id));
+          availableCars = availableCars.filter(car => !bookedCarIds.has(car.id));
+        }
+      }
+
+      setCars(availableCars);
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
