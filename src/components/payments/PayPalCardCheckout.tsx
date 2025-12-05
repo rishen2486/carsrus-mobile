@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -24,6 +25,7 @@ export default function PayPalCardCheckout({
 }: PayPalCardCheckoutProps) {
   const { toast } = useToast();
   const [cardBrand, setCardBrand] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (!window.paypal) {
@@ -99,6 +101,7 @@ export default function PayPalCardCheckout({
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        setIsProcessing(true);
 
         try {
           const payload = await cardFields.submit();
@@ -131,6 +134,8 @@ export default function PayPalCardCheckout({
           });
 
           onError(err);
+        } finally {
+          setIsProcessing(false);
         }
       });
     });
@@ -185,9 +190,17 @@ export default function PayPalCardCheckout({
 
       <button
         type="submit"
-        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90"
+        disabled={isProcessing}
+        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
-        Pay Now
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          "Pay Now"
+        )}
       </button>
     </form>
   );
