@@ -1,11 +1,12 @@
+// FILE: src/components/ui/CheckoutModal.tsx
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreditCard } from "lucide-react";
-import PayPalCardCheckout from "./PayPalCardCheckout";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import PayPalCardCheckout from "@/components/payments/PayPalCardCheckout";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -28,10 +29,12 @@ export function CheckoutModal({
   bookingDetails,
   onPaymentSuccess,
 }: CheckoutModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState("credit-card");
-  const { formatPrice, currency, exchangeRates } = useCurrency();
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const { currency, exchangeRates, formatPrice } = useCurrency();
 
-  const eurAmount = Number((bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2));
+  const eurAmount = Number(
+    (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -42,6 +45,7 @@ export function CheckoutModal({
 
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
           <div className="space-y-4">
+            {/* Booking Summary */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Booking Summary</CardTitle>
@@ -51,54 +55,62 @@ export function CheckoutModal({
                   <span>Car:</span>
                   <span className="font-medium">{bookingDetails.carName}</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span>Pickup:</span>
                   <span>{bookingDetails.pickupLocation}</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span>Drop-off:</span>
                   <span>{bookingDetails.dropoffLocation}</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span>Dates:</span>
                   <span>
                     {bookingDetails.startDate} - {bookingDetails.endDate}
                   </span>
                 </div>
+
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
                   <span>Total ({currency}):</span>
                   <span>{formatPrice(bookingDetails.totalAmount)}</span>
                 </div>
+
                 <div className="flex justify-between font-bold text-lg mt-1">
                   <span>Total (EUR):</span>
                   <span>€ {eurAmount.toFixed(2)}</span>
                 </div>
+
+                <p className="text-sm mt-1">
+                  EUR amount will be billed via PayPal (Card Payment).
+                </p>
               </CardContent>
             </Card>
 
+            {/* Payment Method */}
             <div className="space-y-3">
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="credit-card" id="credit-card" />
-                  <label
-                    htmlFor="credit-card"
-                    className="flex items-center cursor-pointer text-sm font-medium"
-                  >
+                  <RadioGroupItem value="card" id="card" />
+                  <label htmlFor="card" className="flex items-center cursor-pointer">
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Credit / Debit Card
+                    Credit / Debit Card (PayPal Hosted Fields)
                   </label>
                 </div>
               </RadioGroup>
-
-              {paymentMethod === "credit-card" && (
-                <PayPalCardCheckout
-                  bookingId={bookingDetails.id}
-                  eurAmount={eurAmount}
-                  onSuccess={onPaymentSuccess}
-                  onError={(err) => console.error("Payment error:", err)}
-                />
-              )}
             </div>
+
+            {/* Hosted Fields Card Payment */}
+            {paymentMethod === "card" && (
+              <PayPalCardCheckout
+                bookingId={bookingDetails.id}
+                eurAmount={eurAmount}
+                onSuccess={onPaymentSuccess}
+                onError={() => {}}
+              />
+            )}
           </div>
         </ScrollArea>
       </DialogContent>
