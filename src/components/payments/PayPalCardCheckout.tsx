@@ -1,124 +1,153 @@
-// FILE: src/components/payments/PayPalCardCheckout.tsx
-import { useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import {
+  loadScript,
+  PayPalHostedFieldsProvider,
+  PayPalHostedField,
+  usePayPalHostedFields,
+} from "@paypal/react-paypal-js";
 
 interface PayPalCardCheckoutProps {
+  amount: number;
+  currency?: string;
   bookingId: string;
-  eurAmount: number;
-  onSuccess: () => void;
-  onError: (error: any) => void;
+  onSuccess: (details: any) => void;
+  onError: (err: any) => void;
 }
 
-export default function PayPalCardCheckout({
+const createOrderBackend = async (bookingId: string, amount: number, currency: string) => {
+  const res = await fetch("/api/payments/create-paypal-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId, amount, currency }),
+  });
+  return res.json();
+};
+
+const captureOrderBackend = async (orderId: string) => {
+  const res = await fetch("/api/payments/capture-paypal-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId }),
+  });
+  return res.json();
+};
+
+function SubmitCardButton({
   bookingId,
-  eurAmount,
+  amount,
+  currency,
   onSuccess,
   onError,
 }: PayPalCardCheckoutProps) {
-  const { toast } = useToast();
+  const { cardFields } = usePayPalHostedFields();
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!window.paypal) {
-      console.error("❌ PayPal SDK not loaded");
+  const handleClick = async () => {
+    if (!cardFields) {
+      onError("Hosted Fields not loaded");
       return;
     }
 
-    const paypal = window.paypal;
+    try {
+      setLoading(true);
 
-    paypal.HostedFields.render({
-      createOrder: async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke("paypal-payment", {
-            body: {
-              action: "create-order",
-              amount: eurAmount,
-              bookingId,
-            },
-          });
+      // 1️⃣ Create order on your server
+      const order = await createOrderBackend(bookingId, amount, currency);
+      if (!order?.id) throw new Error("Order creation failed");
 
-          if (error || !data?.id) {
-            throw new Error(error?.message || "Order creation failed");
-          }
-
-          return data.id;
-        } catch (err) {
-          console.error("❌ Error creating order:", err);
-          onError(err);
-          throw err;
-        }
-      },
-
-      styles: {
-        input: {
-          "font-size": "16px",
-          "font-family": "Helvetica, Arial, sans-serif",
-          color: "#333",
-        },
-      },
-
-      fields: {
-        number: { selector: "#card-number", placeholder: "4111 1111 1111 1111" },
-        cvv: { selector: "#cvv", placeholder: "123" },
-        expirationDate: { selector: "#expiration-date", placeholder: "MM/YY" },
-      },
-    }).then((cardFields: any) => {
-      const form = document.getElementById("paypal-card-form") as HTMLFormElement;
-
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        try {
-          const payload = await cardFields.submit();
-
-          const { data, error } = await supabase.functions.invoke("paypal-payment", {
-            body: {
-              action: "capture-order",
-              orderId: payload.orderId,
-              bookingId,
-            },
-          });
-
-          if (error || data?.status !== "COMPLETED") {
-            throw new Error("Payment not completed");
-          }
-
-          toast({
-            title: "Payment Successful",
-            description: "Your booking has been confirmed.",
-          });
-
-          onSuccess();
-        } catch (err) {
-          console.error("❌ Hosted Fields payment error:", err);
-
-          toast({
-            title: "Payment Failed",
-            description: "Your card payment could not be processed.",
-            variant: "destructive",
-          });
-
-          onError(err);
-        }
+      // 2️⃣ Submit Hosted Fields
+      const cardResult = await cardFields.submit({
+        contingencies: ["3D_SECURE"],
       });
-    });
-  }, [bookingId, eurAmount, onSuccess, onError, toast]);
+
+      if (!cardResult?.orderId) throw new Error("Card submission failed");
+
+      // 3️⃣ Capture payment on backend
+      const capture = await captureOrderBackend(order.id);
+
+      if (capture?.status !== "COMPLETED") {
+        throw new Error("Payment not completed");
+      }
+
+      onSuccess(capture);
+    } catch (err: any) {
+      onError(err.message || err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <form id="paypal-card-form" className="space-y-3 mt-3">
-      <div id="card-number" className="border p-2 rounded-md"></div>
+    <button
+      disabled={loading}
+      onClick={handleClick}
+      className={`w-full bg-blue-600 text-white py-3 rounded-lg font-semibold ${
+        loading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+      }`}
+    >
+      {loading ? "Processing..." : "Pay Now"}
+    </button>
+  );
+}
 
-      <div className="flex gap-3">
-        <div id="cvv" className="border p-2 rounded-md w-1/2"></div>
-        <div id="expiration-date" className="border p-2 rounded-md w-1/2"></div>
+export default function PayPalCardCheckout({
+  amount,
+  currency = "USD",
+  bookingId,
+  onSuccess,
+  onError,
+}: PayPalCardCheckoutProps) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    loadScript({
+      "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID!,
+      components: "hosted-fields",
+      intent: "capture",
+    }).then(() => setReady(true));
+  }, []);
+
+  if (!ready) return <div>Loading payment form...</div>;
+
+  return (
+    <PayPalHostedFieldsProvider
+      createOrder={() =>
+        createOrderBackend(bookingId, amount, currency).then((r) => r.id)
+      }
+    >
+      <div className="space-y-4">
+        {/* Card Number */}
+        <PayPalHostedField
+          id="card-number-field"
+          hostedFieldType="number"
+          options={{ selector: "#card-number", placeholder: "Card Number" }}
+        />
+        <div id="card-number" className="border rounded p-3 w-full"></div>
+
+        {/* Expiration Date */}
+        <PayPalHostedField
+          id="card-expiry-field"
+          hostedFieldType="expirationDate"
+          options={{ selector: "#card-expiry", placeholder: "MM/YY" }}
+        />
+        <div id="card-expiry" className="border rounded p-3 w-full"></div>
+
+        {/* CVV */}
+        <PayPalHostedField
+          id="card-cvv-field"
+          hostedFieldType="cvv"
+          options={{ selector: "#card-cvv", placeholder: "CVV" }}
+        />
+        <div id="card-cvv" className="border rounded p-3 w-full"></div>
+
+        <SubmitCardButton
+          bookingId={bookingId}
+          amount={amount}
+          currency={currency}
+          onSuccess={onSuccess}
+          onError={onError}
+        />
       </div>
-
-      <button
-        type="submit"
-        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90"
-      >
-        Pay Now
-      </button>
-    </form>
+    </PayPalHostedFieldsProvider>
   );
 }
