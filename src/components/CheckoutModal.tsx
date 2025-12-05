@@ -45,11 +45,13 @@ export function CheckoutModal({
 
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
           <div className="space-y-4">
+
             {/* Booking Summary */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Booking Summary</CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Car:</span>
@@ -84,7 +86,7 @@ export function CheckoutModal({
                 </div>
 
                 <p className="text-sm mt-1">
-                  EUR amount will be billed via PayPal (Card Payment).
+                  You will be billed in EUR via PayPal (Secure Card Payment).
                 </p>
               </CardContent>
             </Card>
@@ -102,13 +104,13 @@ export function CheckoutModal({
               </RadioGroup>
             </div>
 
-            {/* Hosted Fields Card Payment */}
+            {/* PayPal Hosted Fields */}
             {paymentMethod === "card" && (
               <PayPalCardCheckout
                 bookingId={bookingDetails.id}
                 eurAmount={eurAmount}
                 onSuccess={onPaymentSuccess}
-                onError={() => {}}
+                onError={(err) => console.error(err)}
               />
             )}
           </div>
