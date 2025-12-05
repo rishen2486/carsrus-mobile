@@ -25,7 +25,6 @@ export default function PayPalCardCheckout({
 
     const paypal = window.paypal;
 
-    // Render Hosted Fields (Card fields)
     paypal.HostedFields.render({
       createOrder: async () => {
         try {
@@ -34,6 +33,10 @@ export default function PayPalCardCheckout({
               action: "create-order",
               amount: eurAmount,
               bookingId,
+              application_context: {
+                shipping_preference: "NO_SHIPPING",
+                user_action: "PAY_NOW",
+              },
             },
           });
 
@@ -50,13 +53,14 @@ export default function PayPalCardCheckout({
         input: {
           "font-size": "16px",
           "font-family": "Helvetica, Arial, sans-serif",
-          color: "#333",
         },
+        ".valid": { color: "#0f9d58" },
+        ".invalid": { color: "#db4437" },
       },
 
       fields: {
-        number: { selector: "#card-number", placeholder: "4111 1111 1111 1111" },
-        cvv: { selector: "#cvv", placeholder: "123" },
+        number: { selector: "#card-number", placeholder: "Card Number" },
+        cvv: { selector: "#cvv", placeholder: "CVV" },
         expirationDate: { selector: "#expiration-date", placeholder: "MM/YY" },
       },
     }).then((cardFields: any) => {
@@ -66,11 +70,7 @@ export default function PayPalCardCheckout({
         event.preventDefault();
 
         try {
-          const payload = await cardFields.submit({
-            // Optional billing details
-          });
-
-          console.log("Card payload:", payload);
+          const payload = await cardFields.submit();
 
           const { data, error } = await supabase.functions.invoke("paypal-payment", {
             body: {
@@ -80,11 +80,12 @@ export default function PayPalCardCheckout({
             },
           });
 
-          if (error || data?.status !== "COMPLETED") throw new Error("Payment not completed");
+          if (error || data?.status !== "COMPLETED")
+            throw new Error("Payment not completed");
 
           toast({
             title: "Payment Successful!",
-            description: "Your booking has been confirmed via PayPal Card.",
+            description: "Your booking has been confirmed.",
           });
 
           onSuccess();
@@ -108,6 +109,7 @@ export default function PayPalCardCheckout({
         <div id="cvv" className="border p-2 rounded-md w-1/2"></div>
         <div id="expiration-date" className="border p-2 rounded-md w-1/2"></div>
       </div>
+
       <button
         type="submit"
         className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90"
