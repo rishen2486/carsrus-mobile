@@ -38,12 +38,12 @@ export function CheckoutModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh]">
+      <DialogContent className="max-w-lg max-h-[95vh]">
         <DialogHeader>
           <DialogTitle>Complete Your Booking</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+        <ScrollArea className="h-[70vh] pr-4">
           <div className="space-y-4">
 
             {/* Booking Summary */}

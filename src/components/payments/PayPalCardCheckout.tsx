@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
 interface PayPalCardCheckoutProps {
   bookingId: string;
   eurAmount: number;
