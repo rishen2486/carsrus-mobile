@@ -1,119 +1,74 @@
-// FILE: src/components/ui/CheckoutModal.tsx
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { CreditCard } from "lucide-react";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import PayPalCardCheckout from "@/components/payments/PayPalCardCheckout";
+import PayPalCardCheckout from "../payments/PayPalCardCheckout";
 
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  bookingDetails: {
-    id: string;
-    carName: string;
-    startDate: string;
-    endDate: string;
-    totalAmount: number;
-    pickupLocation: string;
-    dropoffLocation: string;
-  };
-  onPaymentSuccess: () => void;
+  bookingId: string;
+  totalAmount: number;
+  currency?: string;
 }
 
-export function CheckoutModal({
+export default function CheckoutModal({
   isOpen,
   onClose,
-  bookingDetails,
-  onPaymentSuccess,
+  bookingId,
+  totalAmount,
+  currency = "USD",
 }: CheckoutModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const { currency, exchangeRates, formatPrice } = useCurrency();
+  const [paymentSuccess, setPaymentSuccess] = useState<any>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const eurAmount = Number(
-    (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2)
-  );
+  if (!isOpen) return null;
+
+  const handleSuccess = (details: any) => {
+    setPaymentSuccess(details);
+    setPaymentError(null);
+  };
+
+  const handleError = (err: string) => {
+    setPaymentError(err);
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>Complete Your Booking</DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+      <div className="bg-white w-full max-w-lg p-6 rounded-xl shadow-xl relative">
+        <h2 className="text-xl font-bold mb-4">Complete Your Payment</h2>
 
-        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-          <div className="space-y-4">
-            {/* Booking Summary */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Booking Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Car:</span>
-                  <span className="font-medium">{bookingDetails.carName}</span>
-                </div>
+        <p className="text-gray-700 mb-4">
+          Secure card payment powered by PayPal.
+        </p>
 
-                <div className="flex justify-between">
-                  <span>Pickup:</span>
-                  <span>{bookingDetails.pickupLocation}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Drop-off:</span>
-                  <span>{bookingDetails.dropoffLocation}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Dates:</span>
-                  <span>
-                    {bookingDetails.startDate} - {bookingDetails.endDate}
-                  </span>
-                </div>
-
-                <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                  <span>Total ({currency}):</span>
-                  <span>{formatPrice(bookingDetails.totalAmount)}</span>
-                </div>
-
-                <div className="flex justify-between font-bold text-lg mt-1">
-                  <span>Total (EUR):</span>
-                  <span>€ {eurAmount.toFixed(2)}</span>
-                </div>
-
-                <p className="text-sm mt-1">
-                  EUR amount will be billed via PayPal (Card Payment).
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Payment Method */}
-            <div className="space-y-3">
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="card" id="card" />
-                  <label htmlFor="card" className="flex items-center cursor-pointer">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Credit / Debit Card (PayPal Hosted Fields)
-                  </label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Hosted Fields Card Payment */}
-            {paymentMethod === "card" && (
-              <PayPalCardCheckout
-                bookingId={bookingDetails.id}
-                eurAmount={eurAmount}
-                onSuccess={onPaymentSuccess}
-                onError={() => {}}
-              />
-            )}
+        {paymentSuccess ? (
+          <div className="bg-green-100 p-4 rounded">
+            <h3 className="font-semibold text-green-700">Payment Successful!</h3>
+            <p>Your booking has been confirmed.</p>
           </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+        ) : (
+          <>
+            {paymentError && (
+              <div className="bg-red-100 text-red-700 p-3 rounded mb-3">
+                {paymentError}
+              </div>
+            )}
+
+            <PayPalCardCheckout
+              bookingId={bookingId}
+              amount={totalAmount}
+              currency={currency}
+              onSuccess={handleSuccess}
+              onError={handleError}
+            />
+          </>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full bg-gray-300 hover:bg-gray-400 py-2 rounded-lg"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   );
 }
