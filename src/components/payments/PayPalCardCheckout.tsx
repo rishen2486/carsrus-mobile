@@ -1,5 +1,5 @@
 // FILE: src/components/payments/PayPalCardCheckout.tsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +17,7 @@ export default function PayPalCardCheckout({
   onError,
 }: PayPalCardCheckoutProps) {
   const { toast } = useToast();
+  const [cardBrand, setCardBrand] = useState<string>("");
 
   useEffect(() => {
     if (!window.paypal) {
@@ -55,14 +56,39 @@ export default function PayPalCardCheckout({
           "font-family": "Helvetica, Arial, sans-serif",
           color: "#333",
         },
+        ".invalid": {
+          color: "red",
+        },
       },
 
       fields: {
-        number: { selector: "#card-number", placeholder: "4111 1111 1111 1111" },
-        cvv: { selector: "#cvv", placeholder: "123" },
-        expirationDate: { selector: "#expiration-date", placeholder: "MM/YY" },
+        cardholderName: {
+          selector: "#card-holder-name-field",
+          placeholder: "Full Name",
+        },
+        number: {
+          selector: "#card-number-field",
+          placeholder: "Card Number",
+        },
+        cvv: {
+          selector: "#cvv-field",
+          placeholder: "123",
+        },
+        expirationDate: {
+          selector: "#expiration-date-field",
+          placeholder: "MM/YY",
+        },
       },
     }).then((cardFields: any) => {
+      // Detect card type
+      cardFields.on("cardTypeChange", (event: any) => {
+        if (event.cards?.length === 1) {
+          setCardBrand(event.cards[0].type);
+        } else {
+          setCardBrand("");
+        }
+      });
+
       const form = document.getElementById("paypal-card-form") as HTMLFormElement;
 
       form.addEventListener("submit", async (event) => {
@@ -105,12 +131,50 @@ export default function PayPalCardCheckout({
   }, [bookingId, eurAmount, onSuccess, onError, toast]);
 
   return (
-    <form id="paypal-card-form" className="space-y-3 mt-3">
-      <div id="card-number" className="border p-2 rounded-md"></div>
+    <form id="paypal-card-form" className="space-y-4 mt-3">
+
+      {/* Cardholder Name */}
+      <div>
+        <label className="text-sm font-medium">Card Holder Name</label>
+        <div
+          id="card-holder-name-field"
+          className="border p-2 rounded-md mt-1"
+        ></div>
+      </div>
+
+      {/* Card Brand Indicator */}
+      {cardBrand && (
+        <div className="text-sm text-gray-600 -mt-2">
+          Detected Card: <span className="font-semibold">{cardBrand.toUpperCase()}</span>
+        </div>
+      )}
+
+      {/* Card Number */}
+      <div>
+        <label className="text-sm font-medium">Card Number</label>
+        <div
+          id="card-number-field"
+          className="border p-2 rounded-md mt-1"
+        ></div>
+      </div>
 
       <div className="flex gap-3">
-        <div id="cvv" className="border p-2 rounded-md w-1/2"></div>
-        <div id="expiration-date" className="border p-2 rounded-md w-1/2"></div>
+
+        {/* CVV */}
+        <div className="w-1/2">
+          <label className="text-sm font-medium">CVV</label>
+          <div id="cvv-field" className="border p-2 rounded-md mt-1"></div>
+        </div>
+
+        {/* Expiration Date */}
+        <div className="w-1/2">
+          <label className="text-sm font-medium">Expiry</label>
+          <div
+            id="expiration-date-field"
+            className="border p-2 rounded-md mt-1"
+          ></div>
+        </div>
+
       </div>
 
       <button
