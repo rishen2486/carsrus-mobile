@@ -1,3 +1,4 @@
+// FILE: src/components/payments/PayPalCardCheckout.tsx
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,7 @@ export default function PayPalCardCheckout({
 
   useEffect(() => {
     if (!window.paypal) {
-      console.error("PayPal SDK not loaded");
+      console.error("❌ PayPal SDK not loaded");
       return;
     }
 
@@ -33,17 +34,16 @@ export default function PayPalCardCheckout({
               action: "create-order",
               amount: eurAmount,
               bookingId,
-              application_context: {
-                shipping_preference: "NO_SHIPPING",
-                user_action: "PAY_NOW",
-              },
             },
           });
 
-          if (error || !data?.id) throw new Error(error?.message || "Order creation failed");
+          if (error || !data?.id) {
+            throw new Error(error?.message || "Order creation failed");
+          }
+
           return data.id;
         } catch (err) {
-          console.error("Error creating PayPal order:", err);
+          console.error("❌ Error creating order:", err);
           onError(err);
           throw err;
         }
@@ -53,14 +53,13 @@ export default function PayPalCardCheckout({
         input: {
           "font-size": "16px",
           "font-family": "Helvetica, Arial, sans-serif",
+          color: "#333",
         },
-        ".valid": { color: "#0f9d58" },
-        ".invalid": { color: "#db4437" },
       },
 
       fields: {
-        number: { selector: "#card-number", placeholder: "Card Number" },
-        cvv: { selector: "#cvv", placeholder: "CVV" },
+        number: { selector: "#card-number", placeholder: "4111 1111 1111 1111" },
+        cvv: { selector: "#cvv", placeholder: "123" },
         expirationDate: { selector: "#expiration-date", placeholder: "MM/YY" },
       },
     }).then((cardFields: any) => {
@@ -80,22 +79,25 @@ export default function PayPalCardCheckout({
             },
           });
 
-          if (error || data?.status !== "COMPLETED")
+          if (error || data?.status !== "COMPLETED") {
             throw new Error("Payment not completed");
+          }
 
           toast({
-            title: "Payment Successful!",
+            title: "Payment Successful",
             description: "Your booking has been confirmed.",
           });
 
           onSuccess();
         } catch (err) {
-          console.error("Card payment error:", err);
+          console.error("❌ Hosted Fields payment error:", err);
+
           toast({
             title: "Payment Failed",
-            description: "Could not complete card payment.",
+            description: "Your card payment could not be processed.",
             variant: "destructive",
           });
+
           onError(err);
         }
       });
@@ -105,6 +107,7 @@ export default function PayPalCardCheckout({
   return (
     <form id="paypal-card-form" className="space-y-3 mt-3">
       <div id="card-number" className="border p-2 rounded-md"></div>
+
       <div className="flex gap-3">
         <div id="cvv" className="border p-2 rounded-md w-1/2"></div>
         <div id="expiration-date" className="border p-2 rounded-md w-1/2"></div>
