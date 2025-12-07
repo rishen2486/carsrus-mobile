@@ -38,6 +38,25 @@ serve(async (req) => {
 
     console.log(`PayPal payment action: ${action}`, { amount, bookingId, orderId });
 
+    if (action === 'get-client-token') {
+      const accessToken = await generateAccessToken();
+      const response = await fetch(`${PAYPAL_API}/v1/identity/generate-token`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "Accept-Language": "en_US",
+        },
+      });
+
+      const tokenData = await response.json();
+      console.log("PayPal client token generated");
+
+      return new Response(JSON.stringify({ clientToken: tokenData.client_token }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'create-order') {
       const accessToken = await generateAccessToken();
       const response = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
