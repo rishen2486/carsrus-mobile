@@ -70,10 +70,6 @@ export default function PayPalCardCheckout({
       },
 
       fields: {
-        cardholderName: {
-          selector: "#card-holder-name-field",
-          placeholder: "Full Name",
-        },
         number: {
           selector: "#card-number-field",
           placeholder: "Card Number",
@@ -88,7 +84,8 @@ export default function PayPalCardCheckout({
         },
       },
     }).then((cardFields: any) => {
-      // Detect card type
+
+      // Detect card brand
       cardFields.on("cardTypeChange", (event: any) => {
         if (event.cards?.length === 1) {
           setCardBrand(event.cards[0].type);
@@ -138,70 +135,3 @@ export default function PayPalCardCheckout({
           setIsProcessing(false);
         }
       });
-    });
-  }, [bookingId, eurAmount, onSuccess, onError, toast]);
-
-  return (
-    <form id="paypal-card-form" className="space-y-4 mt-3">
-
-      {/* Cardholder Name */}
-      <div>
-        <label className="text-sm font-medium">Card Holder Name</label>
-        <div
-          id="card-holder-name-field"
-          className="border p-2 rounded-md mt-1"
-        ></div>
-      </div>
-
-      {/* Card Brand Indicator */}
-      {cardBrand && (
-        <div className="text-sm text-gray-600 -mt-2">
-          Detected Card: <span className="font-semibold">{cardBrand.toUpperCase()}</span>
-        </div>
-      )}
-
-      {/* Card Number */}
-      <div>
-        <label className="text-sm font-medium">Card Number</label>
-        <div
-          id="card-number-field"
-          className="border p-2 rounded-md mt-1"
-        ></div>
-      </div>
-
-      <div className="flex gap-3">
-
-        {/* CVV */}
-        <div className="w-1/2">
-          <label className="text-sm font-medium">CVV</label>
-          <div id="cvv-field" className="border p-2 rounded-md mt-1"></div>
-        </div>
-
-        {/* Expiration Date */}
-        <div className="w-1/2">
-          <label className="text-sm font-medium">Expiry</label>
-          <div
-            id="expiration-date-field"
-            className="border p-2 rounded-md mt-1"
-          ></div>
-        </div>
-
-      </div>
-
-      <button
-        type="submit"
-        disabled={isProcessing}
-        className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {isProcessing ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          "Pay Now"
-        )}
-      </button>
-    </form>
-  );
-}
