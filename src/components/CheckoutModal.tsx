@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, QrCode, Smartphone, CheckCircle, Loader2 } from 'lucide-react';
+import { CreditCard, QrCode, Smartphone, CheckCircle, Loader2, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -149,6 +149,7 @@ export function CheckoutModal({
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [processing, setProcessing] = useState(false);
   const [maupassConfirmed, setMaupassConfirmed] = useState(false);
+  const [showPaypalInfoDialog, setShowPaypalInfoDialog] = useState(false);
   const { toast } = useToast();
   const { formatPrice, currency, exchangeRates } = useCurrency();
 
@@ -262,7 +263,12 @@ export function CheckoutModal({
               {/* Payment Method */}
               <div className="space-y-3">
                 <Label className="text-base font-medium">Payment Method</Label>
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                <RadioGroup value={paymentMethod} onValueChange={(value) => {
+                  if (value === 'paypal') {
+                    setShowPaypalInfoDialog(true);
+                  }
+                  setPaymentMethod(value);
+                }}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="credit-card" id="credit-card" />
                     <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
@@ -389,6 +395,26 @@ export function CheckoutModal({
               )}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* PayPal Info Dialog */}
+      <Dialog open={showPaypalInfoDialog} onOpenChange={setShowPaypalInfoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              Payment Information
+            </DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="text-sm text-foreground leading-relaxed">
+            You will use PayPal secure payment gateway for this transaction. You can select "PayPal" to use your own PayPal Account or select "Debit or Credit Card" to input your card directly. If you choose "Debit or Credit Card" please wait for PayPal to connect to its server for the credit card details to appear. You will also require to select your country from the drop down list for the Billing.
+          </DialogDescription>
+          <DialogFooter>
+            <Button onClick={() => setShowPaypalInfoDialog(false)} className="w-full">
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PayPalScriptProvider>
