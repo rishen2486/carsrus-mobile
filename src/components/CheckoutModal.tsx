@@ -6,12 +6,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, QrCode, Smartphone, CheckCircle } from 'lucide-react';
+import { CreditCard, QrCode, Smartphone, CheckCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-
+import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer } from '@paypal/react-paypal-js';
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,6 +24,119 @@ interface CheckoutModalProps {
     dropoffLocation: string;
   };
   onPaymentSuccess: () => void;
+}
+
+// Separate component to access PayPal script loading state
+function PayPalButtonsWithLoader({
+  eurAmount,
+  bookingDetails,
+  toast,
+  onPaymentSuccess,
+  onClose,
+}: {
+  eurAmount: string;
+  bookingDetails: { id: string };
+  toast: ReturnType<typeof useToast>['toast'];
+  onPaymentSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [{ isPending }] = usePayPalScriptReducer();
+
+  return (
+    <div className="pt-4">
+      <p className="text-sm text-muted-foreground mb-3">
+        Pay securely using PayPal or your card. No shipping details required.
+      </p>
+
+      {isPending && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading payment options...</span>
+        </div>
+      )}
+
+      <div className={isPending ? 'hidden' : ''}>
+        <PayPalButtons
+          style={{ layout: 'vertical' }}
+          createOrder={async () => {
+            try {
+              console.log('Creating PayPal order (no billing/shipping)...');
+              const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
+                body: {
+                  action: 'create-order',
+                  amount: parseFloat(eurAmount),
+                  bookingId: bookingDetails.id,
+                  application_context: {
+                    shipping_preference: 'NO_SHIPPING',
+                    user_action: 'PAY_NOW',
+                    brand_name: 'RoadReady Rent',
+                  },
+                  payer: {
+                    address: {
+                      country_code: 'MU',
+                    },
+                  },
+                },
+              });
+              if (error || !orderData?.id)
+                throw new Error(error?.message || 'Order creation failed');
+              return orderData.id;
+            } catch (err) {
+              console.error('PayPal createOrder error:', err);
+              toast({
+                title: 'Payment Failed',
+                description: 'Could not create PayPal order.',
+                variant: 'destructive',
+              });
+              throw err;
+            }
+          }}
+          onApprove={async (data) => {
+            try {
+              console.log('Capturing PayPal order...', data.orderID);
+              const { data: captureData, error } = await supabase.functions.invoke('paypal-payment', {
+                body: {
+                  action: 'capture-order',
+                  orderId: data.orderID,
+                  bookingId: bookingDetails.id,
+                },
+              });
+              if (error || captureData?.status !== 'COMPLETED')
+                throw new Error(error?.message || 'Payment not completed');
+              toast({
+                title: 'PayPal Payment Successful!',
+                description: 'Your booking has been confirmed via PayPal.',
+              });
+              onPaymentSuccess();
+              onClose();
+            } catch (err) {
+              console.error('PayPal capture error:', err);
+              toast({
+                title: 'Payment Failed',
+                description: 'Could not complete PayPal payment.',
+                variant: 'destructive',
+              });
+            }
+          }}
+          onError={(err) => {
+            console.error('PayPal SDK error:', err);
+            toast({
+              title: 'Payment Error',
+              description: 'PayPal could not process your payment.',
+              variant: 'destructive',
+            });
+          }}
+          onCancel={() => {
+            console.log('PayPal payment cancelled.');
+            toast({
+              title: 'Payment Cancelled',
+              description: 'You cancelled the PayPal payment.',
+            });
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function CheckoutModal({
@@ -267,90 +379,13 @@ export function CheckoutModal({
 
               {/* PayPal Payment */}
               {paymentMethod === 'paypal' && (
-                <div className="pt-4">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Pay securely using PayPal or your card. No shipping details required.
-                  </p>
-
-                  <PayPalButtons
-                    style={{ layout: 'vertical' }}
-                    createOrder={async () => {
-                      try {
-                        console.log('Creating PayPal order (no billing/shipping)...');
-                        const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
-                          body: {
-                            action: 'create-order',
-                            amount: parseFloat(eurAmount),
-                            bookingId: bookingDetails.id,
-                            application_context: {
-                              shipping_preference: 'NO_SHIPPING',
-                              user_action: 'PAY_NOW',
-                              brand_name: 'RoadReady Rent',
-                            },
-                            payer: {
-                              address: {
-                                country_code: 'MU',
-                              },
-                            },
-                          },
-                        });
-                        if (error || !orderData?.id)
-                          throw new Error(error?.message || 'Order creation failed');
-                        return orderData.id;
-                      } catch (err) {
-                        console.error('PayPal createOrder error:', err);
-                        toast({
-                          title: 'Payment Failed',
-                          description: 'Could not create PayPal order.',
-                          variant: 'destructive',
-                        });
-                        throw err;
-                      }
-                    }}
-                    onApprove={async (data) => {
-                      try {
-                        console.log('Capturing PayPal order...', data.orderID);
-                        const { data: captureData, error } = await supabase.functions.invoke('paypal-payment', {
-                          body: {
-                            action: 'capture-order',
-                            orderId: data.orderID,
-                            bookingId: bookingDetails.id,
-                          },
-                        });
-                        if (error || captureData?.status !== 'COMPLETED')
-                          throw new Error(error?.message || 'Payment not completed');
-                        toast({
-                          title: 'PayPal Payment Successful!',
-                          description: 'Your booking has been confirmed via PayPal.',
-                        });
-                        onPaymentSuccess();
-                        onClose();
-                      } catch (err) {
-                        console.error('PayPal capture error:', err);
-                        toast({
-                          title: 'Payment Failed',
-                          description: 'Could not complete PayPal payment.',
-                          variant: 'destructive',
-                        });
-                      }
-                    }}
-                    onError={(err) => {
-                      console.error('PayPal SDK error:', err);
-                      toast({
-                        title: 'Payment Error',
-                        description: 'PayPal could not process your payment.',
-                        variant: 'destructive',
-                      });
-                    }}
-                    onCancel={() => {
-                      console.log('PayPal payment cancelled.');
-                      toast({
-                        title: 'Payment Cancelled',
-                        description: 'You cancelled the PayPal payment.',
-                      });
-                    }}
-                  />
-                </div>
+                <PayPalButtonsWithLoader
+                  eurAmount={eurAmount}
+                  bookingDetails={bookingDetails}
+                  toast={toast}
+                  onPaymentSuccess={onPaymentSuccess}
+                  onClose={onClose}
+                />
               )}
             </div>
           </ScrollArea>
