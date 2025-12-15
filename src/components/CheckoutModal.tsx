@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, DollarSign } from 'lucide-react';
+import { CreditCard, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -153,15 +153,20 @@ export function CheckoutModal({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="credit-card" id="credit-card" />
                     <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Credit / Debit Card
+                      <QrCode className="w-4 h-4 mr-2" />
+                      Maupass (Scan to pay)
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="paypal" id="paypal" />
-                    <Label htmlFor="paypal" className="flex items-center cursor-pointer">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      PayPal
+                    <Label htmlFor="paypal" className="flex flex-col cursor-pointer">
+                      <span className="flex items-center">
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Credit/Debit Card
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-6">
+                        Using PayPal platform for a secure Card Transaction - You can use either your Credit/Debit Card or your PayPal account
+                      </span>
                     </Label>
                   </div>
                 </RadioGroup>
