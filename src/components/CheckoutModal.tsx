@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, QrCode } from 'lucide-react';
+import { CreditCard, QrCode, Smartphone, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -36,6 +36,7 @@ export function CheckoutModal({
   const [paymentMethod, setPaymentMethod] = useState('paypal');
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [processing, setProcessing] = useState(false);
+  const [maupassConfirmed, setMaupassConfirmed] = useState(false);
   const { toast } = useToast();
   const { formatPrice, currency, exchangeRates } = useCurrency();
 
@@ -172,6 +173,98 @@ export function CheckoutModal({
                 </RadioGroup>
               </div>
 
+              {/* Maupass QR Payment */}
+              {paymentMethod === 'credit-card' && (
+                <div className="pt-4 space-y-4">
+                  <div className="bg-muted/50 rounded-lg p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <Smartphone className="w-5 h-5 text-primary" />
+                      <span className="font-medium">Scan with any Mauritian digital wallet</span>
+                    </div>
+                    
+                    {/* Placeholder QR Code */}
+                    <div className="bg-white p-4 rounded-lg inline-block mx-auto mb-3">
+                      <div className="w-48 h-48 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center gap-2">
+                        <QrCode className="w-16 h-16 text-muted-foreground/50" />
+                        <span className="text-xs text-muted-foreground">QR Code</span>
+                        <span className="text-xs text-muted-foreground font-medium">{formatPrice(bookingDetails.totalAmount)}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Compatible with:</p>
+                      <p className="font-medium text-foreground">MCB Juice • Blink by Emtel • my.t money</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm">
+                    <p className="text-amber-800 dark:text-amber-200">
+                      <strong>Note:</strong> MauCAS QR integration requires a merchant account. This is a placeholder for demonstration purposes. Contact us to enable live payments.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="maupass-confirm"
+                      checked={maupassConfirmed}
+                      onChange={(e) => setMaupassConfirmed(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    <Label htmlFor="maupass-confirm" className="text-sm cursor-pointer">
+                      I have completed the payment via my mobile wallet
+                    </Label>
+                  </div>
+
+                  <Button
+                    onClick={async () => {
+                      if (!maupassConfirmed) {
+                        toast({
+                          title: 'Please confirm payment',
+                          description: 'Check the box to confirm you have completed the payment.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      setProcessing(true);
+                      try {
+                        const { error } = await supabase
+                          .from('bookings')
+                          .update({ payment_status: 'paid' })
+                          .eq('id', bookingDetails.id);
+                        if (error) throw error;
+                        toast({
+                          title: 'Payment Confirmed!',
+                          description: 'Your booking has been confirmed.',
+                        });
+                        onPaymentSuccess();
+                        onClose();
+                      } catch (error) {
+                        console.error('Maupass payment error:', error);
+                        toast({
+                          title: 'Error',
+                          description: 'Could not confirm payment. Please try again.',
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setProcessing(false);
+                      }
+                    }}
+                    disabled={processing || !maupassConfirmed}
+                    className="w-full"
+                  >
+                    {processing ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Confirm Payment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
               {/* PayPal Payment */}
               {paymentMethod === 'paypal' && (
                 <div className="pt-4">
@@ -196,7 +289,7 @@ export function CheckoutModal({
                             },
                             payer: {
                               address: {
-                                country_code: 'MU', // 🇲🇺 Default country set to Mauritius
+                                country_code: 'MU',
                               },
                             },
                           },
