@@ -145,7 +145,7 @@ export function CheckoutModal({
   bookingDetails,
   onPaymentSuccess,
 }: CheckoutModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState('paypal');
+  const [paymentMethod, setPaymentMethod] = useState('credit-card');
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [processing, setProcessing] = useState(false);
   const [maupassConfirmed, setMaupassConfirmed] = useState(false);
@@ -273,7 +273,7 @@ export function CheckoutModal({
                     <RadioGroupItem value="credit-card" id="credit-card" />
                     <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
                       <QrCode className="w-4 h-4 mr-2" />
-                      Maupass (Scan to pay)
+                      MauCAS (Scan to Pay)
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -407,8 +407,14 @@ export function CheckoutModal({
               Payment Information
             </DialogTitle>
           </DialogHeader>
-          <DialogDescription className="text-sm text-foreground leading-relaxed">
-            You will use PayPal secure payment gateway for this transaction. You can select "PayPal" to use your own PayPal Account or select "Debit or Credit Card" to input your card directly. If you choose "Debit or Credit Card" please wait for PayPal to connect to its server for the credit card details to appear. You will also require to select your country from the drop down list for the Billing.
+          <DialogDescription className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+            {`You will use PayPal Secure Payment gateway for this transaction.
+
+1) You can select "PayPal" (Yellow button) to use your own PayPal Account or
+2) You can select "Debit or Credit Card" (Black Button) to input your card details directly.
+3) If you choose "Debit or Credit Card" please wait a few seconds after clicking on the Button for PayPal to connect to its server.
+4) Once connected PayPal will allow you to input your card details and address. Select your country in drop down list and there is no need for you to fill the shipping details.
+5) You will receive Booking Confirmation once payment is made.`}
           </DialogDescription>
           <DialogFooter>
             <Button onClick={() => setShowPaypalInfoDialog(false)} className="w-full">
