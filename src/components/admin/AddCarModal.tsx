@@ -18,8 +18,11 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
     brand: "",
     seats: "",
     transmission: "",
+    fuel_type: "",
     price_per_day: "",
+    deposit_amount: "",
     mileage: "",
+    price_per_km: "",
     large_bags: "",
     small_bags: "",
     description: "",
@@ -79,8 +82,11 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
           brand: form.brand,
           seats: form.seats ? parseInt(form.seats) : null,
           transmission: form.transmission || null,
+          fuel_type: form.fuel_type || null,
           price_per_day: form.price_per_day ? parseFloat(form.price_per_day) : null,
+          deposit_amount: form.deposit_amount ? parseFloat(form.deposit_amount) : null,
           mileage: form.mileage || null,
+          price_per_km: form.price_per_km ? parseFloat(form.price_per_km) : null,
           large_bags: form.large_bags ? parseInt(form.large_bags) : 0,
           small_bags: form.small_bags ? parseInt(form.small_bags) : 0,
           description: form.description || null,
@@ -164,6 +170,22 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
           </div>
           
           <div>
+            <Label htmlFor="fuel_type">Fuel Type</Label>
+            <select
+              name="fuel_type"
+              value={form.fuel_type}
+              onChange={handleChange}
+              className="w-full border rounded-lg p-2 bg-background text-foreground"
+            >
+              <option value="">Select</option>
+              <option value="Petrol">Petrol</option>
+              <option value="Diesel">Diesel</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="Electric">Electric</option>
+            </select>
+          </div>
+          
+          <div>
             <Label htmlFor="price_per_day">Price per Day (Rs)</Label>
             <Input
               id="price_per_day"
@@ -174,6 +196,19 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
               value={form.price_per_day}
               onChange={handleChange}
               required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="deposit_amount">Deposit Amount (Rs)</Label>
+            <Input
+              id="deposit_amount"
+              name="deposit_amount"
+              type="number"
+              step="0.01"
+              placeholder="5000.00"
+              value={form.deposit_amount}
+              onChange={handleChange}
             />
           </div>
           
@@ -203,12 +238,25 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
           </div>
           
           <div>
-            <Label htmlFor="mileage">Mileage</Label>
+            <Label htmlFor="mileage">Mileage Limit (Type "Unlimited Mileage" if there is no limit)</Label>
             <Input
               id="mileage"
               name="mileage"
-              placeholder="e.g. 15km/L"
+              placeholder="e.g. 200km/day or Unlimited Mileage"
               value={form.mileage}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="price_per_km">Price per km (Rs) for Excess Mileage</Label>
+            <Input
+              id="price_per_km"
+              name="price_per_km"
+              type="number"
+              step="0.01"
+              placeholder="10.00"
+              value={form.price_per_km}
               onChange={handleChange}
             />
           </div>
