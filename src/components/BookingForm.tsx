@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarIcon, MapPin, User, Mail, Phone, X, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +34,7 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
   const [loading, setLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [locations, setLocations] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -68,6 +70,23 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
 
     fetchBookedDates();
   }, [car.id]);
+
+  // Fetch locations from Supabase
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const { data } = await supabase
+        .from('Location')
+        .select('Region')
+        .not('Region', 'is', null);
+
+      if (data) {
+        const regions = data.map(item => item.Region).filter(Boolean) as string[];
+        setLocations([...new Set(regions)]);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   const calculateTotalAmount = () => {
     if (!dateRange?.from || !dateRange?.to) return 0;
@@ -342,14 +361,21 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
                   <MapPin className="h-4 w-4" />
                   Pickup Location
                 </Label>
-                <Input
-                  id="pickupLocation"
-                  name="pickupLocation"
+                <Select
                   value={formData.pickupLocation}
-                  onChange={handleInputChange}
-                  placeholder="123 Main St, City, State"
-                  required
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, pickupLocation: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pickup location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="pickupTime" className="flex items-center gap-2">
@@ -370,14 +396,21 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
                   <MapPin className="h-4 w-4" />
                   Return Location
                 </Label>
-                <Input
-                  id="dropoffLocation"
-                  name="dropoffLocation"
+                <Select
                   value={formData.dropoffLocation}
-                  onChange={handleInputChange}
-                  placeholder="456 Oak Ave, City, State"
-                  required
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, dropoffLocation: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select return location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="returnTime" className="flex items-center gap-2">
