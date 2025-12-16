@@ -175,8 +175,10 @@ export type Database = {
           brand: string | null
           country: string | null
           created_at: string | null
+          deposit_amount: number | null
           description: string | null
           features: string[] | null
+          fuel_type: string | null
           id: string
           image_url: string | null
           large_bags: number | null
@@ -184,6 +186,7 @@ export type Database = {
           name: string
           photos: string[] | null
           price_per_day: number
+          price_per_km: number | null
           seats: number | null
           small_bags: number | null
           transmission: string | null
@@ -195,8 +198,10 @@ export type Database = {
           brand?: string | null
           country?: string | null
           created_at?: string | null
+          deposit_amount?: number | null
           description?: string | null
           features?: string[] | null
+          fuel_type?: string | null
           id?: string
           image_url?: string | null
           large_bags?: number | null
@@ -204,6 +209,7 @@ export type Database = {
           name: string
           photos?: string[] | null
           price_per_day: number
+          price_per_km?: number | null
           seats?: number | null
           small_bags?: number | null
           transmission?: string | null
@@ -215,8 +221,10 @@ export type Database = {
           brand?: string | null
           country?: string | null
           created_at?: string | null
+          deposit_amount?: number | null
           description?: string | null
           features?: string[] | null
+          fuel_type?: string | null
           id?: string
           image_url?: string | null
           large_bags?: number | null
@@ -224,6 +232,7 @@ export type Database = {
           name?: string
           photos?: string[] | null
           price_per_day?: number
+          price_per_km?: number | null
           seats?: number | null
           small_bags?: number | null
           transmission?: string | null
