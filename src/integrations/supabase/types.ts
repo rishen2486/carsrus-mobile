@@ -187,6 +187,7 @@ export type Database = {
           photos: string[] | null
           price_per_day: number
           price_per_km: number | null
+          price_publish: number | null
           seats: number | null
           small_bags: number | null
           transmission: string | null
@@ -210,6 +211,7 @@ export type Database = {
           photos?: string[] | null
           price_per_day: number
           price_per_km?: number | null
+          price_publish?: number | null
           seats?: number | null
           small_bags?: number | null
           transmission?: string | null
@@ -233,6 +235,7 @@ export type Database = {
           photos?: string[] | null
           price_per_day?: number
           price_per_km?: number | null
+          price_publish?: number | null
           seats?: number | null
           small_bags?: number | null
           transmission?: string | null

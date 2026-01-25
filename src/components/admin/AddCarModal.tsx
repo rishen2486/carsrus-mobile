@@ -238,7 +238,7 @@ export default function AddCarModal({ onClose }: AddCarModalProps) {
           </div>
           
           <div>
-            <Label htmlFor="mileage">Mileage Limit (Type "Unlimited Mileage" if there is no limit)</Label>
+            <Label htmlFor="mileage">Mileage (Max Mileage to customers)</Label>
             <Input
               id="mileage"
               name="mileage"
