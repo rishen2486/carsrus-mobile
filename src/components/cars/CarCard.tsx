@@ -20,6 +20,7 @@ interface CarCardProps {
     fuel?: string;
     pricePerDay?: number;
     price_per_day?: number;
+    price_publish?: number;
     location?: string;
     features?: string[];
   };
@@ -34,7 +35,7 @@ const CarCard = ({ car, onBookNow }: CarCardProps) => {
     || car.image_url 
     || car.image 
     || 'https://images.unsplash.com/photo-1494976688153-9c302e0e1271?w=800&h=600&fit=crop';
-  const pricePerDay = car.price_per_day || car.pricePerDay || 99;
+  const displayPrice = car.price_publish || (car.price_per_day ? car.price_per_day + 100 : car.pricePerDay ? car.pricePerDay + 100 : 199);
   const features = car.features || [];
   
   const handleBookNow = () => {
@@ -126,7 +127,7 @@ const CarCard = ({ car, onBookNow }: CarCardProps) => {
       <CardFooter className="p-4 pt-0 flex items-center justify-between">
         <div className="text-left">
           <div className="text-2xl font-bold text-foreground">
-            {formatPrice(pricePerDay)}
+            {formatPrice(displayPrice)}
             <span className="text-sm font-normal text-muted-foreground">/day</span>
           </div>
         </div>
