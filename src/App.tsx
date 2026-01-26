@@ -16,6 +16,8 @@ import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
 import Booking from "./pages/Booking";
 import BookingConfirmation from "./pages/BookingConfirmation";
+import EditProfile from "./pages/EditProfile";
+import LoyaltyRewards from "./pages/LoyaltyRewards";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,8 @@ const App = () => (
         <Route path="/admin/edit-car/:id" element={<EditCar />} />
         <Route path="/booking/:id" element={<Booking />} />
         <Route path="/booking/:id/confirmation" element={<BookingConfirmation />} />
+        <Route path="/profile/edit" element={<EditProfile />} />
+        <Route path="/loyalty-rewards" element={<LoyaltyRewards />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
