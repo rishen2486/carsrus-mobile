@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Car, Menu, X, User, Settings, LogOut } from "lucide-react";
+import { Car, Menu, X, User, Settings, LogOut, Edit, Calendar, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency, Currency } from "@/contexts/CurrencyContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ProfileDropdown from "@/components/layout/ProfileDropdown";
 
 interface Profile {
   user_id: string;
@@ -148,9 +149,6 @@ const Navbar = () => {
 
             {profile ? (
               <>
-                <span className="text-sm text-muted-foreground">
-                  Welcome, {profile.full_name || profile.name || profile.email}
-                </span>
                 {profile.is_admin && (
                   <Button size="sm" variant="premium" asChild>
                     <Link to="/admin">
@@ -159,10 +157,10 @@ const Navbar = () => {
                     </Link>
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
+                <ProfileDropdown 
+                  profile={profile} 
+                  onLogout={() => setProfile(null)} 
+                />
               </>
             ) : (
               <>
@@ -227,12 +225,24 @@ const Navbar = () => {
                         </Link>
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => {
+                    <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
+                      <Link to="/profile/edit" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
+                      <Link to="/loyalty-rewards" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Gift className="h-4 w-4 mr-2" />
+                        Loyalty & Rewards
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="w-full justify-start text-destructive" onClick={() => {
                       setIsMobileMenuOpen(false);
                       handleLogout();
                     }}>
                       <LogOut className="h-4 w-4 mr-2" />
-                      Logout
+                      Sign Out
                     </Button>
                   </>
                 ) : (
