@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import AddCarModal from "@/components/admin/AddCarModal";
 import AddTourModal from "@/components/admin/AddTourModal";
 import AddAttractionModal from "@/components/admin/AddAttractionModal";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminReports from "@/components/admin/AdminReports";
-import CarList from "@/components/admin/CarList";
 import Navbar from "@/components/layout/Navbar";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [showCarModal, setShowCarModal] = useState(false);
   const [showTourModal, setShowTourModal] = useState(false);
   const [showAttractionModal, setShowAttractionModal] = useState(false);
-  const [showCarList, setShowCarList] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,7 +25,7 @@ export default function Dashboard() {
         {/* Add Items Section */}
         <div className="flex flex-wrap gap-4">
           <Button
-            onClick={() => setShowCarList(!showCarList)}
+            onClick={() => navigate("/admin/cars")}
             variant="outline"
           >
             Manage Cars
@@ -49,9 +49,6 @@ export default function Dashboard() {
             Add Attraction
           </Button>
         </div>
-
-        {/* Car List Section */}
-        {showCarList && <CarList />}
 
         {/* Analytics Section */}
         <AdminAnalytics />
