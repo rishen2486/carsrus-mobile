@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [showCarModal, setShowCarModal] = useState(false);
   const [showTourModal, setShowTourModal] = useState(false);
   const [showAttractionModal, setShowAttractionModal] = useState(false);
+  const [showCarList, setShowCarList] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -23,6 +24,12 @@ export default function Dashboard() {
         
         {/* Add Items Section */}
         <div className="flex flex-wrap gap-4">
+          <Button
+            onClick={() => setShowCarList(!showCarList)}
+            variant="outline"
+          >
+            Manage Cars
+          </Button>
           <Button
             onClick={() => setShowCarModal(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -44,7 +51,7 @@ export default function Dashboard() {
         </div>
 
         {/* Car List Section */}
-        <CarList />
+        {showCarList && <CarList />}
 
         {/* Analytics Section */}
         <AdminAnalytics />
