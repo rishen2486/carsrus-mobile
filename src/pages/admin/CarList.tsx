@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Edit, Trash2, Car } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Car, CalendarOff } from "lucide-react";
+import BlockDatesModal from "@/components/admin/BlockDatesModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ export default function CarList() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSuperuser, setIsSuperuser] = useState(false);
+  const [blockModalCar, setBlockModalCar] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -252,6 +254,14 @@ export default function CarList() {
                       )}
 
                       <div className="flex flex-wrap gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBlockModalCar({ id: car.id, name: car.name })}
+                        >
+                          <CalendarOff className="h-4 w-4 mr-2" />
+                          Book Car
+                        </Button>
                         <Button variant="outline" size="sm" asChild>
                           <Link to={`/admin/edit-car/${car.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
@@ -301,6 +311,14 @@ export default function CarList() {
           </div>
         )}
       </div>
+
+      {/* Block Dates Modal */}
+      <BlockDatesModal
+        open={!!blockModalCar}
+        onOpenChange={(open) => !open && setBlockModalCar(null)}
+        carId={blockModalCar?.id || ""}
+        carName={blockModalCar?.name || ""}
+      />
     </div>
   );
 }
