@@ -37,6 +37,7 @@ interface Car {
 export default function CarList() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSuperuser, setIsSuperuser] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,10 +47,32 @@ export default function CarList() {
   const fetchCars = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("cars")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Check if user is superuser
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("superuser")
+        .eq("user_id", user.id)
+        .single();
+
+      const isSuper = profile?.superuser || false;
+      setIsSuperuser(isSuper);
+
+      let query = supabase.from("cars").select("*");
+      if (!isSuper) {
+        query = query.eq("user_id", user.id);
+      }
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       setCars(data || []);
@@ -125,7 +148,7 @@ export default function CarList() {
             <div>
               <h1 className="text-3xl font-bold">Manage Cars</h1>
               <p className="text-muted-foreground">
-                {cars.length} car{cars.length !== 1 ? 's' : ''} in your fleet
+                {isSuperuser ? "All cars" : "Your cars"} — {cars.length} car{cars.length !== 1 ? 's' : ''} in fleet
               </p>
             </div>
           </div>
