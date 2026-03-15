@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, QrCode, Smartphone, CheckCircle, Loader2, Info } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useCurrency } from '@/contexts/CurrencyContext';
-import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer } from '@paypal/react-paypal-js';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/contexts/CurrencyContext";
+
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,403 +23,159 @@ interface CheckoutModalProps {
   onPaymentSuccess: () => void;
 }
 
-// Separate component to access PayPal script loading state
-function PayPalButtonsWithLoader({
-  eurAmount,
-  bookingDetails,
-  toast,
-  onPaymentSuccess,
-  onClose,
-}: {
-  eurAmount: string;
-  bookingDetails: { id: string };
-  toast: ReturnType<typeof useToast>['toast'];
-  onPaymentSuccess: () => void;
-  onClose: () => void;
-}) {
-  const [{ isPending }] = usePayPalScriptReducer();
-
-  return (
-    <div className="pt-4">
-      <p className="text-sm text-muted-foreground mb-3">
-        Pay securely using PayPal or your card. No shipping details required.
-      </p>
-
-      {isPending && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-2 text-muted-foreground">Loading payment options...</span>
-        </div>
-      )}
-
-      <div className={isPending ? 'hidden' : ''}>
-        <PayPalButtons
-          style={{ layout: 'vertical' }}
-          createOrder={async () => {
-            try {
-              console.log('Creating PayPal order (no billing/shipping)...');
-              const { data: orderData, error } = await supabase.functions.invoke('paypal-payment', {
-                body: {
-                  action: 'create-order',
-                  amount: parseFloat(eurAmount),
-                  bookingId: bookingDetails.id,
-                  application_context: {
-                    shipping_preference: 'NO_SHIPPING',
-                    user_action: 'PAY_NOW',
-                    brand_name: 'RoadReady Rent',
-                  },
-                  payer: {
-                    address: {
-                      country_code: 'MU',
-                    },
-                  },
-                },
-              });
-              if (error || !orderData?.id)
-                throw new Error(error?.message || 'Order creation failed');
-              return orderData.id;
-            } catch (err) {
-              console.error('PayPal createOrder error:', err);
-              toast({
-                title: 'Payment Failed',
-                description: 'Could not create PayPal order.',
-                variant: 'destructive',
-              });
-              throw err;
-            }
-          }}
-          onApprove={async (data) => {
-            try {
-              console.log('Capturing PayPal order...', data.orderID);
-              const { data: captureData, error } = await supabase.functions.invoke('paypal-payment', {
-                body: {
-                  action: 'capture-order',
-                  orderId: data.orderID,
-                  bookingId: bookingDetails.id,
-                },
-              });
-              if (error || captureData?.status !== 'COMPLETED')
-                throw new Error(error?.message || 'Payment not completed');
-              toast({
-                title: 'PayPal Payment Successful!',
-                description: 'Your booking has been confirmed via PayPal.',
-              });
-              onPaymentSuccess();
-              onClose();
-            } catch (err) {
-              console.error('PayPal capture error:', err);
-              toast({
-                title: 'Payment Failed',
-                description: 'Could not complete PayPal payment.',
-                variant: 'destructive',
-              });
-            }
-          }}
-          onError={(err) => {
-            console.error('PayPal SDK error:', err);
-            toast({
-              title: 'Payment Error',
-              description: 'PayPal could not process your payment.',
-              variant: 'destructive',
-            });
-          }}
-          onCancel={() => {
-            console.log('PayPal payment cancelled.');
-            toast({
-              title: 'Payment Cancelled',
-              description: 'You cancelled the PayPal payment.',
-            });
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 export function CheckoutModal({
   isOpen,
   onClose,
   bookingDetails,
-  onPaymentSuccess,
+  onPaymentSuccess
 }: CheckoutModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState('credit-card');
-  const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
+
   const [processing, setProcessing] = useState(false);
-  const [maupassConfirmed, setMaupassConfirmed] = useState(false);
-  const [showPaypalInfoDialog, setShowPaypalInfoDialog] = useState(false);
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const { formatPrice, currency, exchangeRates } = useCurrency();
 
   const eurAmount = (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2);
-  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb';
 
-  useEffect(() => {
-    console.log('✅ CheckoutModal mounted');
-    console.log('PayPal Client ID:', paypalClientId);
-  }, [paypalClientId]);
-
-  const isCardFormValid =
-    cardDetails.name && cardDetails.number && cardDetails.expiry && cardDetails.cvv;
-
-  const handleCardPayment = async () => {
-    if (!isCardFormValid) {
-      toast({
-        title: 'Incomplete Form',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setProcessing(true);
+  const startPayment = async () => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const { error } = await supabase
-        .from('bookings')
-        .update({ payment_status: 'paid' })
-        .eq('id', bookingDetails.id);
+
+      setProcessing(true);
+
+      const { data, error } = await supabase.functions.invoke(
+        "create-peach-checkout",
+        {
+          body: {
+            bookingId: bookingDetails.id,
+            amount: eurAmount
+          }
+        }
+      );
+
       if (error) throw error;
 
-      toast({ title: 'Payment Successful!', description: 'Your booking has been confirmed.' });
-      onPaymentSuccess();
-      onClose();
+      setCheckoutId(data.checkoutId);
+
     } catch (error) {
-      console.error('Card payment error:', error);
+
+      console.error("Peach error:", error);
+
       toast({
-        title: 'Payment Failed',
-        description: 'There was an error processing your card.',
-        variant: 'destructive',
+        title: "Payment Error",
+        description: "Could not start payment session.",
+        variant: "destructive"
       });
+
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <PayPalScriptProvider
-      options={{
-        clientId: paypalClientId,
-        currency: 'EUR',
-        intent: 'capture',
-        components: 'buttons',
-        // 👇 Add Advanced Card Fields support (required for card-only mode)
-        'enable-funding': 'card',
-        'disable-funding': 'credit,p24,giropay,sofort',
-      }}
-    >
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Complete Your Booking</DialogTitle>
-          </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={onClose}>
 
-          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-            <div className="space-y-4">
-              {/* Booking Summary */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Booking Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Car:</span>
-                    <span className="font-medium">{bookingDetails.carName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Pickup:</span>
-                    <span>{bookingDetails.pickupLocation}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Drop-off:</span>
-                    <span>{bookingDetails.dropoffLocation}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Dates:</span>
-                    <span>
-                      {bookingDetails.startDate} - {bookingDetails.endDate}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                    <span>Total ({currency}):</span>
-                    <span>{formatPrice(bookingDetails.totalAmount)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg mt-1">
-                    <span>Total (EUR):</span>
-                    <span>
-                      €{' '}
-                      {(bookingDetails.totalAmount * exchangeRates.EUR).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-sm mt-1">(EUR amount will be billed via PayPal)</p>
-                </CardContent>
-              </Card>
+      <DialogContent className="max-w-md max-h-[90vh]">
 
-              {/* Payment Method */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">Payment Method</Label>
-                <RadioGroup value={paymentMethod} onValueChange={(value) => {
-                  if (value === 'paypal') {
-                    setShowPaypalInfoDialog(true);
-                  }
-                  setPaymentMethod(value);
-                }}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="credit-card" id="credit-card" />
-                    <Label htmlFor="credit-card" className="flex items-center cursor-pointer">
-                      <QrCode className="w-4 h-4 mr-2" />
-                      MauCAS (Scan to Pay)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="paypal" id="paypal" />
-                    <Label htmlFor="paypal" className="flex flex-col cursor-pointer">
-                      <span className="flex items-center">
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Credit/Debit Card
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-6">
-                        Using PayPal platform for a secure Card Transaction - You can use either your Credit/Debit Card or your PayPal account
-                      </span>
-                    </Label>
-                  </div>
-                </RadioGroup>
+        <DialogHeader>
+          <DialogTitle>Complete Your Booking</DialogTitle>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+
+          <div className="space-y-4">
+
+            {/* Booking Summary */}
+
+            <Card>
+
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Booking Summary</CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-2 text-sm">
+
+                <div className="flex justify-between">
+                  <span>Car:</span>
+                  <span className="font-medium">{bookingDetails.carName}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Pickup:</span>
+                  <span>{bookingDetails.pickupLocation}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Drop-off:</span>
+                  <span>{bookingDetails.dropoffLocation}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Dates:</span>
+                  <span>{bookingDetails.startDate} - {bookingDetails.endDate}</span>
+                </div>
+
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total ({currency})</span>
+                  <span>{formatPrice(bookingDetails.totalAmount)}</span>
+                </div>
+
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total (EUR)</span>
+                  <span>€ {eurAmount}</span>
+                </div>
+
+              </CardContent>
+
+            </Card>
+
+
+            {!checkoutId && (
+
+              <Button
+                onClick={startPayment}
+                className="w-full"
+                disabled={processing}
+              >
+
+                {processing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin"/>
+                    Connecting to secure payment...
+                  </>
+                ) : (
+                  "Proceed to Secure Payment"
+                )}
+
+              </Button>
+
+            )}
+
+
+            {checkoutId && (
+
+              <div className="mt-4">
+
+                <form
+                  action={`${import.meta.env.VITE_PEACH_CHECKOUT_URL}/${checkoutId}`}
+                  className="paymentWidgets"
+                  data-brands="VISA MASTER AMEX"
+                ></form>
+
+                <script
+                  src={`${import.meta.env.VITE_PEACH_WIDGET_SCRIPT}?checkoutId=${checkoutId}`}
+                ></script>
+
               </div>
 
-              {/* Maupass QR Payment */}
-              {paymentMethod === 'credit-card' && (
-                <div className="pt-4 space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <Smartphone className="w-5 h-5 text-primary" />
-                      <span className="font-medium">Scan with any Mauritian digital wallet</span>
-                    </div>
-                    
-                    {/* Placeholder QR Code */}
-                    <div className="bg-white p-4 rounded-lg inline-block mx-auto mb-3">
-                      <div className="w-48 h-48 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center gap-2">
-                        <QrCode className="w-16 h-16 text-muted-foreground/50" />
-                        <span className="text-xs text-muted-foreground">QR Code</span>
-                        <span className="text-xs text-muted-foreground font-medium">{formatPrice(bookingDetails.totalAmount)}</span>
-                      </div>
-                    </div>
+            )}
 
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Compatible with:</p>
-                      <p className="font-medium text-foreground">MCB Juice • Blink by Emtel • my.t money</p>
-                    </div>
-                  </div>
+          </div>
 
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm">
-                    <p className="text-amber-800 dark:text-amber-200">
-                      <strong>Note:</strong> MauCAS QR integration requires a merchant account. This is a placeholder for demonstration purposes. Contact us to enable live payments.
-                    </p>
-                  </div>
+        </ScrollArea>
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="maupass-confirm"
-                      checked={maupassConfirmed}
-                      onChange={(e) => setMaupassConfirmed(e.target.checked)}
-                      className="rounded border-input"
-                    />
-                    <Label htmlFor="maupass-confirm" className="text-sm cursor-pointer">
-                      I have completed the payment via my mobile wallet
-                    </Label>
-                  </div>
+      </DialogContent>
 
-                  <Button
-                    onClick={async () => {
-                      if (!maupassConfirmed) {
-                        toast({
-                          title: 'Please confirm payment',
-                          description: 'Check the box to confirm you have completed the payment.',
-                          variant: 'destructive',
-                        });
-                        return;
-                      }
-                      setProcessing(true);
-                      try {
-                        const { error } = await supabase
-                          .from('bookings')
-                          .update({ payment_status: 'paid' })
-                          .eq('id', bookingDetails.id);
-                        if (error) throw error;
-                        toast({
-                          title: 'Payment Confirmed!',
-                          description: 'Your booking has been confirmed.',
-                        });
-                        onPaymentSuccess();
-                        onClose();
-                      } catch (error) {
-                        console.error('Maupass payment error:', error);
-                        toast({
-                          title: 'Error',
-                          description: 'Could not confirm payment. Please try again.',
-                          variant: 'destructive',
-                        });
-                      } finally {
-                        setProcessing(false);
-                      }
-                    }}
-                    disabled={processing || !maupassConfirmed}
-                    className="w-full"
-                  >
-                    {processing ? (
-                      'Processing...'
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Confirm Payment
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {/* PayPal Payment */}
-              {paymentMethod === 'paypal' && (
-                <PayPalButtonsWithLoader
-                  eurAmount={eurAmount}
-                  bookingDetails={bookingDetails}
-                  toast={toast}
-                  onPaymentSuccess={onPaymentSuccess}
-                  onClose={onClose}
-                />
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {/* PayPal Info Dialog */}
-      <Dialog open={showPaypalInfoDialog} onOpenChange={setShowPaypalInfoDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="w-5 h-5 text-primary" />
-              Payment Information
-            </DialogTitle>
-          </DialogHeader>
-          <DialogDescription className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-            {`You will use PayPal Secure Payment gateway for this transaction.
-
-1) You can select "PayPal" (Yellow button) to use your own PayPal Account or
-2) You can select "Debit or Credit Card" (Black Button) to input your card details directly.
-3) If you choose "Debit or Credit Card" please wait a few seconds after clicking on the Button for PayPal to connect to its server.
-4) Once connected PayPal will allow you to input your card details and address. Select your country in drop down list and there is no need for you to fill the shipping details.
-5) You will receive Booking Confirmation once payment is made.`}
-          </DialogDescription>
-          <DialogFooter>
-            <Button onClick={() => setShowPaypalInfoDialog(false)} className="w-full">
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </PayPalScriptProvider>
+    </Dialog>
   );
 }
