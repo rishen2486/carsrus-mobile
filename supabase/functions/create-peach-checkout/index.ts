@@ -12,23 +12,26 @@ const PEACH_TOKEN = Deno.env.get("PEACH_TOKEN")!;
 const PEACH_API = "https://test.oppwa.com";
 
 serve(async (req) => {
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { action, amount, bookingId, checkoutId } = await req.json();
 
-    console.log(`Peach payment action: ${action}`, { amount, bookingId, checkoutId });
+    console.log(`Peach payment action: ${action}`, { amount, bookingId });
 
     /**
      * STEP 1
-     * Create checkout session
+     * Create checkout session (called by frontend)
      */
+
     if (action === "create-checkout") {
 
       const params = new URLSearchParams({
@@ -36,7 +39,7 @@ serve(async (req) => {
         amount: Number(amount).toFixed(2),
         currency: "EUR",
         paymentType: "DB",
-        "merchantTransactionId": bookingId
+        merchantTransactionId: bookingId,
       });
 
       const response = await fetch(`${PEACH_API}/v1/checkouts`, {
@@ -52,15 +55,21 @@ serve(async (req) => {
 
       console.log("Peach checkout created:", checkout);
 
-      return new Response(JSON.stringify(checkout), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          checkoutId: checkout.id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     /**
      * STEP 2
-     * Verify payment result
+     * Verify payment after widget redirect
      */
+
     if (action === "verify-payment") {
 
       const response = await fetch(
@@ -80,10 +89,17 @@ serve(async (req) => {
       const resultCode = paymentData?.result?.code;
 
       /**
-       * Peach success codes start with:
-       * 000.000
+       * SUCCESS ranges defined by Peach
        */
-      if (resultCode && resultCode.startsWith("000.000")) {
+
+      const success =
+        resultCode?.startsWith("000.000") ||
+        resultCode?.startsWith("000.100") ||
+        resultCode?.startsWith("000.200");
+
+      if (success) {
+
+        console.log("Payment successful → updating booking");
 
         const { error } = await supabase
           .from("bookings")
@@ -91,6 +107,11 @@ serve(async (req) => {
           .eq("id", bookingId);
 
         if (error) throw error;
+
+      } else {
+
+        console.log("Payment not successful:", resultCode);
+
       }
 
       return new Response(JSON.stringify(paymentData), {
@@ -98,20 +119,28 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Invalid action" }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
 
   } catch (error) {
+
     console.error("Peach payment error:", error);
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
+
 });
