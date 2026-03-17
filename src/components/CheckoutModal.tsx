@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,10 +38,15 @@ export function CheckoutModal({
 
   const eurAmount = (bookingDetails.totalAmount * exchangeRates.EUR).toFixed(2);
 
+  /**
+   * STEP 1: Create Peach Checkout
+   */
   const startPayment = async () => {
     try {
-
       setProcessing(true);
+
+      // ✅ Store bookingId for verification step
+      localStorage.setItem("bookingId", bookingDetails.id);
 
       const { data, error } = await supabase.functions.invoke(
         "create-peach-checkout",
@@ -55,7 +60,12 @@ export function CheckoutModal({
 
       if (error) throw error;
 
-      setCheckoutId(data.checkoutId);
+      // ✅ Peach returns "id" (not checkoutId)
+      const id = data?.id;
+
+      if (!id) throw new Error("No checkoutId returned");
+
+      setCheckoutId(id);
 
     } catch (error) {
 
@@ -72,6 +82,25 @@ export function CheckoutModal({
     }
   };
 
+  /**
+   * STEP 2: Load Peach Widget Script
+   */
+  useEffect(() => {
+
+    if (!checkoutId) return;
+
+    const script = document.createElement("script");
+    script.src = `https://test.oppwa.com/v1/paymentWidgets.js?checkoutId=${checkoutId}`;
+    script.async = true;
+
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+
+  }, [checkoutId]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
 
@@ -86,7 +115,6 @@ export function CheckoutModal({
           <div className="space-y-4">
 
             {/* Booking Summary */}
-
             <Card>
 
               <CardHeader className="pb-3">
@@ -129,15 +157,13 @@ export function CheckoutModal({
 
             </Card>
 
-
+            {/* STEP 3: Start Payment */}
             {!checkoutId && (
-
               <Button
                 onClick={startPayment}
                 className="w-full"
                 disabled={processing}
               >
-
                 {processing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin"/>
@@ -146,28 +172,20 @@ export function CheckoutModal({
                 ) : (
                   "Proceed to Secure Payment"
                 )}
-
               </Button>
-
             )}
 
-
+            {/* STEP 4: Peach Widget */}
             {checkoutId && (
-
               <div className="mt-4">
 
                 <form
-                  action={`${import.meta.env.VITE_PEACH_CHECKOUT_URL}/${checkoutId}`}
+                  action="/payment-result"
                   className="paymentWidgets"
                   data-brands="VISA MASTER AMEX"
                 ></form>
 
-                <script
-                  src={`${import.meta.env.VITE_PEACH_WIDGET_SCRIPT}?checkoutId=${checkoutId}`}
-                ></script>
-
               </div>
-
             )}
 
           </div>
