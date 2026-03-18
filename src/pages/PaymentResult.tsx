@@ -11,14 +11,24 @@ const PaymentResult = () => {
 
     const verifyPayment = async () => {
 
-      const checkoutId = params.get("id") // from Peach
-      const bookingId = params.get("merchantTransactionId")
+      // ✅ From Peach redirect
+      const checkoutId = params.get("id")
+
+      // ✅ PRIMARY SOURCE (reliable)
+      let bookingId = localStorage.getItem("bookingId")
+
+      // ⚠️ FALLBACK (not guaranteed)
+      if (!bookingId) {
+        bookingId = params.get("merchantTransactionId")
+      }
 
       console.log("Checkout ID:", checkoutId)
       console.log("Booking ID:", bookingId)
 
       if (!checkoutId || !bookingId) {
         console.error("Missing parameters")
+
+        navigate("/booking-error") // optional fallback page
         return
       }
 
@@ -34,6 +44,8 @@ const PaymentResult = () => {
 
       if (error) {
         console.error("Verification error:", error)
+
+        navigate(`/booking/${bookingId}?payment=error`)
         return
       }
 
@@ -45,9 +57,16 @@ const PaymentResult = () => {
         resultCode?.startsWith("000.200")
 
       if (success) {
+
+        // ✅ Clean storage
+        localStorage.removeItem("bookingId")
+
         navigate(`/booking/${bookingId}/confirmation`)
+
       } else {
+
         navigate(`/booking/${bookingId}?payment=failed`)
+
       }
 
     }
