@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.peach-webhook]
 verify_jwt = false
+
+[functions.verify-peach-payment]
+verify_jwt = false

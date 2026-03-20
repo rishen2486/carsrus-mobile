@@ -144,8 +144,19 @@ export function CheckoutModal({
             },
           },
           eventHandlers: {
-            onCompleted: (event: any) => {
+            onCompleted: async (event: any) => {
               console.log("Payment completed:", event);
+              // Verify payment server-side
+              try {
+                await supabase.functions.invoke("verify-peach-payment", {
+                  body: {
+                    checkoutId: checkoutId,
+                    bookingId: bookingDetails.id,
+                  },
+                });
+              } catch (verifyErr) {
+                console.error("Verify error (webhook will handle):", verifyErr);
+              }
               toast({
                 title: "Payment Successful!",
                 description: "Your booking has been confirmed.",
