@@ -59,27 +59,32 @@ serve(async (req) => {
     // Step 2: Create checkout
     const origin = req.headers.get("origin") || "*";
 
-    const checkoutBody = {
-      "authentication.entityId": PEACH_ENTITY_ID,
-      amount: Number(amount).toFixed(2),
-      currency: currency || "MUR",
-      paymentType: "DB",
-      merchantTransactionId: bookingId,
-      nonce: crypto.randomUUID(),
-      shopperResultUrl: shopperResultUrl || "",
-      notificationUrl: `${Deno.env.get("SUPABASE_URL")}/functions/v1/peach-webhook`,
-    };
+    const params = new URLSearchParams();
 
-    const response = await fetch(CHECKOUT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        Origin: origin,
-        Referer: origin,
-      },
-      body: JSON.stringify(checkoutBody),
-    });
+params.append("authentication.entityId", PEACH_ENTITY_ID);
+params.append("amount", Number(amount).toFixed(2));
+params.append("currency", currency || "MUR");
+params.append("paymentType", "DB");
+params.append("merchantTransactionId", bookingId);
+params.append("nonce", crypto.randomUUID());
+
+if (shopperResultUrl) {
+  params.append("shopperResultUrl", shopperResultUrl);
+}
+
+params.append(
+  "notificationUrl",
+  `${Deno.env.get("SUPABASE_URL")}/functions/v1/peach-webhook`
+);
+
+const response = await fetch(CHECKOUT_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Authorization: `Bearer ${accessToken}`,
+  },
+  body: params,
+});
 
     const data = await response.json();
     console.log("Checkout response:", JSON.stringify(data));
