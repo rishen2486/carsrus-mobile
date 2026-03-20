@@ -1,85 +1,41 @@
-import { useEffect } from "react"
-import { useSearchParams, useNavigate } from "react-router-dom"
-import { supabase } from "@/integrations/supabase/client"
+import { useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 const PaymentResult = () => {
-
-  const [params] = useSearchParams()
-  const navigate = useNavigate()
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // With Peach Embedded Checkout using event handlers,
+    // this page is a fallback for redirect-based flows.
+    const bookingId = params.get("merchantTransactionId") || localStorage.getItem("bookingId");
+    const resultCode = params.get("result.code");
 
-    const verifyPayment = async () => {
-
-      // ✅ From Peach redirect
-      const checkoutId = params.get("id")
-
-      // ✅ PRIMARY SOURCE (reliable)
-      let bookingId = localStorage.getItem("bookingId")
-
-      // ⚠️ FALLBACK (not guaranteed)
-      if (!bookingId) {
-        bookingId = params.get("merchantTransactionId")
-      }
-
-      console.log("Checkout ID:", checkoutId)
-      console.log("Booking ID:", bookingId)
-
-      if (!checkoutId || !bookingId) {
-        console.error("Missing parameters")
-
-        navigate("/booking-error") // optional fallback page
-        return
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "verify-peach-payment",
-        {
-          body: {
-            checkoutId,
-            bookingId
-          }
-        }
-      )
-
-      if (error) {
-        console.error("Verification error:", error)
-
-        navigate(`/booking/${bookingId}?payment=error`)
-        return
-      }
-
-      const resultCode = data?.result?.code
+    if (bookingId) {
+      localStorage.removeItem("bookingId");
 
       const success =
         resultCode?.startsWith("000.000") ||
         resultCode?.startsWith("000.100") ||
-        resultCode?.startsWith("000.200")
+        resultCode?.startsWith("000.200");
 
       if (success) {
-
-        // ✅ Clean storage
-        localStorage.removeItem("bookingId")
-
-        navigate(`/booking/${bookingId}/confirmation`)
-
+        navigate(`/booking/${bookingId}/confirmation`);
       } else {
-
-        navigate(`/booking/${bookingId}?payment=failed`)
-
+        navigate(`/booking/${bookingId}?payment=failed`);
       }
-
+    } else {
+      navigate("/");
     }
-
-    verifyPayment()
-
-  }, [])
+  }, []);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="w-6 h-6 animate-spin mr-2" />
       <p>Verifying your payment, please wait...</p>
     </div>
-  )
-}
+  );
+};
 
-export default PaymentResult
+export default PaymentResult;
