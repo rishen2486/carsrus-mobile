@@ -13,17 +13,39 @@ serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+    // Peach v2 can send form-encoded or JSON
+    let payload: Record<string, any>;
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await req.formData();
+      payload = Object.fromEntries(formData.entries());
+    } else {
+      payload = await req.json();
+    }
 
     console.log("Peach webhook received:", JSON.stringify(payload));
 
-    const bookingId = payload.merchantTransactionId;
-    const resultCode = payload.result?.code;
+    // v2 webhook fields
+    const bookingId =
+      payload.merchantTransactionId || payload.merchant_transactionId;
+    const resultCode =
+      payload["result.code"] || payload.result?.code;
+    const checkoutId = payload.checkoutId || payload.id;
 
+    // Success codes: 000.000.xxx, 000.100.xxx, 000.200.xxx
     const success =
-      resultCode?.startsWith("000.000") ||
-      resultCode?.startsWith("000.100") ||
-      resultCode?.startsWith("000.200");
+      resultCode &&
+      (resultCode.startsWith("000.000") ||
+        resultCode.startsWith("000.100") ||
+        resultCode.startsWith("000.200"));
+
+    console.log("Webhook parsed:", {
+      bookingId,
+      resultCode,
+      checkoutId,
+      success,
+    });
 
     if (success && bookingId) {
       const supabase = createClient(
@@ -33,7 +55,9 @@ serve(async (req) => {
 
       const { error } = await supabase
         .from("bookings")
-        .update({ payment_status: "paid" })
+        .update({
+          payment_status: "paid",
+        })
         .eq("id", bookingId);
 
       if (error) {
@@ -42,7 +66,11 @@ serve(async (req) => {
         console.log(`Booking ${bookingId} marked as paid via webhook`);
       }
     } else {
-      console.log("Payment not successful or missing bookingId:", resultCode);
+      console.log(
+        "Payment not successful or missing bookingId:",
+        resultCode,
+        bookingId
+      );
     }
 
     return new Response("OK", { status: 200 });

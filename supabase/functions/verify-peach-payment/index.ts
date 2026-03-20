@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,12 +11,11 @@ const PEACH_CLIENT_ID = Deno.env.get("PEACH_CLIENT_ID")!;
 const PEACH_CLIENT_SECRET = Deno.env.get("PEACH_CLIENT_SECRET")!;
 const PEACH_ENTITY_ID = Deno.env.get("PEACH_ENTITY_ID")!;
 
-// Sandbox URLs
 const AUTH_URL = "https://sandbox-dashboard.peachpayments.com/api/oauth/token";
-const CHECKOUT_URL = "https://testsecure.peachpayments.com/v2/checkout";
+const STATUS_URL = "https://testsecure.peachpayments.com/v2/checkout";
 
 /**
- * Step 1: Get OAuth bearer token from Peach
+ * Get OAuth bearer token
  */
 async function getAccessToken(): Promise<string> {
   const response = await fetch(AUTH_URL, {
@@ -29,13 +29,9 @@ async function getAccessToken(): Promise<string> {
   });
 
   const data = await response.json();
-  console.log("Auth response status:", response.status);
-
   if (!response.ok || !data.access_token) {
-    console.error("Auth error:", JSON.stringify(data));
-    throw new Error(data.message || "Failed to get access token");
+    throw new Error("Failed to get access token");
   }
-
   return data.access_token;
 }
 
@@ -45,62 +41,70 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency, bookingId, shopperResultUrl } = await req.json();
+    const { checkoutId, bookingId } = await req.json();
 
-    console.log("Creating Peach v2 embedded checkout:", {
-      amount,
-      currency,
-      bookingId,
-    });
+    if (!checkoutId) {
+      throw new Error("checkoutId is required");
+    }
 
-    // Step 1: Get bearer token
+    console.log("Verifying payment:", { checkoutId, bookingId });
+
+    // Get bearer token
     const accessToken = await getAccessToken();
 
-    // Step 2: Create checkout
-    const origin = req.headers.get("origin") || "*";
-
-    const checkoutBody = {
-      "authentication.entityId": PEACH_ENTITY_ID,
-      amount: Number(amount).toFixed(2),
-      currency: currency || "MUR",
-      paymentType: "DB",
-      merchantTransactionId: bookingId,
-      nonce: crypto.randomUUID(),
-      shopperResultUrl: shopperResultUrl || "",
-      notificationUrl: `${Deno.env.get("SUPABASE_URL")}/functions/v1/peach-webhook`,
-    };
-
-    const response = await fetch(CHECKOUT_URL, {
-      method: "POST",
+    // Query Peach v2 checkout status
+    const response = await fetch(`${STATUS_URL}/${checkoutId}/status`, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
-        Origin: origin,
-        Referer: origin,
       },
-      body: JSON.stringify(checkoutBody),
     });
 
     const data = await response.json();
-    console.log("Checkout response:", JSON.stringify(data));
+    console.log("Payment status response:", JSON.stringify(data));
 
     if (!response.ok) {
       throw new Error(
-        data?.message || data?.error || `Peach API error: ${response.status}`
+        data?.message || `Status check failed: ${response.status}`
       );
+    }
+
+    const resultCode = data.result?.code;
+    const success =
+      resultCode &&
+      (resultCode.startsWith("000.000") ||
+        resultCode.startsWith("000.100") ||
+        resultCode.startsWith("000.200"));
+
+    // Update booking if paid
+    if (success && bookingId) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      await supabase
+        .from("bookings")
+        .update({ payment_status: "paid" })
+        .eq("id", bookingId);
+
+      console.log(`Booking ${bookingId} verified and marked as paid`);
     }
 
     return new Response(
       JSON.stringify({
-        checkoutId: data.checkoutId || data.id,
-        entityId: PEACH_ENTITY_ID,
+        success,
+        status: data.status,
+        resultCode,
+        resultDescription: data.result?.description,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Peach checkout error:", error);
+    console.error("Verify payment error:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ error: errorMessage }), {
