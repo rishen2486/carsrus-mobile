@@ -15,25 +15,8 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 
 declare global {
   interface Window {
-    Checkout?: {
-      initiate: (options: any) => { render: (container: string | HTMLElement) => void; unmount: () => void };
-    };
+    Checkout?: any;
   }
-}
-
-interface CheckoutModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  bookingDetails: {
-    id: string;
-    carName: string;
-    startDate: string;
-    endDate: string;
-    totalAmount: number;
-    pickupLocation: string;
-    dropoffLocation: string;
-  };
-  onPaymentSuccess: () => void;
 }
 
 export function CheckoutModal({
@@ -41,19 +24,22 @@ export function CheckoutModal({
   onClose,
   bookingDetails,
   onPaymentSuccess,
-}: CheckoutModalProps) {
+}: any) {
   const [processing, setProcessing] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
-  const checkoutRef = useRef<{ unmount: () => void } | null>(null);
+
+  const checkoutRef = useRef<any>(null);
 
   const { toast } = useToast();
-  const { formatPrice, currency, exchangeRates } = useCurrency();
+  const { formatPrice, currency } = useCurrency();
 
   const murAmount = bookingDetails.totalAmount;
 
-  /** Create Peach checkout session */
+  /**
+   * STEP 1 — Call Supabase function
+   */
   const startPayment = async () => {
     try {
       setProcessing(true);
@@ -68,6 +54,8 @@ export function CheckoutModal({
           },
         }
       );
+
+      console.log("Checkout API response:", data);
 
       if (error) throw error;
       if (!data?.checkoutId) throw new Error("No checkoutId returned");
@@ -86,11 +74,10 @@ export function CheckoutModal({
     }
   };
 
-  /** Load Peach Embedded Checkout SDK */
+  /**
+   * STEP 2 — Load SDK ONCE
+   */
   useEffect(() => {
-    if (!checkoutId) return;
-
-    // Check if SDK already loaded
     if (window.Checkout) {
       setSdkLoaded(true);
       return;
@@ -100,7 +87,12 @@ export function CheckoutModal({
     script.src =
       "https://sandbox-checkout.peachpayments.com/js/checkout.js";
     script.async = true;
-    script.onload = () => setSdkLoaded(true);
+
+    script.onload = () => {
+      console.log("Peach SDK loaded");
+      setSdkLoaded(true);
+    };
+
     script.onerror = () => {
       toast({
         title: "SDK Error",
@@ -108,122 +100,131 @@ export function CheckoutModal({
         variant: "destructive",
       });
     };
+
     document.body.appendChild(script);
+  }, []);
 
-    return () => {
-      // Don't remove script — it may be reused
-    };
-  }, [checkoutId]);
-
-  /** Render embedded checkout once SDK + checkoutId are ready */
+  /**
+   * STEP 3 — Render checkout
+   */
   useEffect(() => {
-    if (!sdkLoaded || !checkoutId || !entityId || !window.Checkout) return;
+    if (!sdkLoaded || !checkoutId || !entityId) return;
+    if (!window.Checkout) return;
 
-    // Small delay to ensure DOM container exists
-    const timeout = setTimeout(() => {
+    const container = document.getElementById(
+      "peach-checkout-container"
+    );
+    if (!container) {
+      console.error("Checkout container not found");
+      return;
+    }
+
+    // Clean previous instance
+    if (checkoutRef.current) {
       try {
-        const checkout = window.Checkout.initiate({
-          checkoutId,
-          key: entityId,
-          options: {
-            paymentMethods: {
-              include: ["CARD"],
-            },
-            ordering: {
-              CARD: 1,
-            },
+        checkoutRef.current.unmount();
+      } catch {}
+      checkoutRef.current = null;
+    }
+
+    try {
+      console.log("Rendering checkout:", {
+        checkoutId,
+        entityId,
+      });
+
+      const checkout = window.Checkout.initiate({
+        checkoutId,
+        key: entityId,
+
+        options: {
+          paymentMethods: {
+            include: ["CARD"],
           },
-          customisations: {
-            showCancelButton: false,
-            showAmountField: false,
-            card: {
-              submitButtonText: "Pay Now",
-              showCardIcon: true,
-              showBillingFields: false,
-              brands: ["VISA", "MASTERCARD", "AMEX"],
-            },
+          ordering: {
+            CARD: 1,
           },
-          eventHandlers: {
-            onCompleted: async (event: any) => {
-              console.log("Payment completed:", event);
-              // Verify payment server-side
-              try {
-                await supabase.functions.invoke("verify-peach-payment", {
+        },
+
+        customisations: {
+          showCancelButton: false,
+          showAmountField: false,
+        },
+
+        eventHandlers: {
+          onCompleted: async (event: any) => {
+            console.log("✅ Payment completed:", event);
+
+            try {
+              await supabase.functions.invoke(
+                "verify-peach-payment",
+                {
                   body: {
-                    checkoutId: checkoutId,
+                    checkoutId,
                     bookingId: bookingDetails.id,
                   },
-                });
-              } catch (verifyErr) {
-                console.error("Verify error (webhook will handle):", verifyErr);
-              }
-              toast({
-                title: "Payment Successful!",
-                description: "Your booking has been confirmed.",
-              });
-              onPaymentSuccess();
-              onClose();
-            },
-            onCancelled: (event: any) => {
-              console.log("Payment cancelled:", event);
-              toast({
-                title: "Payment Cancelled",
-                description: "You cancelled the payment.",
-                variant: "destructive",
-              });
-            },
-            onExpired: (event: any) => {
-              console.log("Checkout expired:", event);
-              toast({
-                title: "Session Expired",
-                description: "Payment session timed out. Please try again.",
-                variant: "destructive",
-              });
-              setCheckoutId(null);
-              setSdkLoaded(false);
-            },
-            onError: (event: any) => {
-              console.error("Payment error:", event);
-              toast({
-                title: "Payment Failed",
-                description:
-                  event?.result?.description || "An error occurred.",
-                variant: "destructive",
-              });
-            },
+                }
+              );
+            } catch (err) {
+              console.error("Verify error:", err);
+            }
+
+            toast({
+              title: "Payment Successful!",
+              description: "Your booking has been confirmed.",
+            });
+
+            onPaymentSuccess();
+            onClose();
           },
-        });
 
-        checkout.render("#peach-checkout-container");
-        checkoutRef.current = checkout;
-      } catch (err) {
-        console.error("Checkout render error:", err);
-      }
-    }, 100);
+          onCancelled: () => {
+            toast({
+              title: "Payment Cancelled",
+              description: "You cancelled the payment.",
+              variant: "destructive",
+            });
+          },
 
-    return () => {
-      clearTimeout(timeout);
-      if (checkoutRef.current) {
-        try {
-          checkoutRef.current.unmount();
-        } catch {}
-        checkoutRef.current = null;
-      }
-    };
+          onExpired: () => {
+            toast({
+              title: "Session Expired",
+              description: "Please try again.",
+              variant: "destructive",
+            });
+            setCheckoutId(null);
+          },
+
+          onError: (event: any) => {
+            console.error("❌ Payment error:", event);
+            toast({
+              title: "Payment Failed",
+              description:
+                event?.result?.description || "Payment failed.",
+              variant: "destructive",
+            });
+          },
+        },
+      });
+
+      checkout.render("#peach-checkout-container");
+      checkoutRef.current = checkout;
+    } catch (err) {
+      console.error("Render error:", err);
+    }
   }, [sdkLoaded, checkoutId, entityId]);
 
-  /** Reset state when modal closes */
+  /**
+   * Cleanup on close
+   */
   useEffect(() => {
-    if (!isOpen) {
-      if (checkoutRef.current) {
-        try {
-          checkoutRef.current.unmount();
-        } catch {}
-        checkoutRef.current = null;
-      }
+    if (!isOpen && checkoutRef.current) {
+      try {
+        checkoutRef.current.unmount();
+      } catch {}
+      checkoutRef.current = null;
       setCheckoutId(null);
       setEntityId(null);
-      setSdkLoaded(false);
     }
   }, [isOpen]);
 
@@ -239,14 +240,14 @@ export function CheckoutModal({
             {/* Booking Summary */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Booking Summary</CardTitle>
+                <CardTitle className="text-lg">
+                  Booking Summary
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Car:</span>
-                  <span className="font-medium">
-                    {bookingDetails.carName}
-                  </span>
+                  <span>{bookingDetails.carName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Pickup:</span>
@@ -259,17 +260,20 @@ export function CheckoutModal({
                 <div className="flex justify-between">
                   <span>Dates:</span>
                   <span>
-                    {bookingDetails.startDate} - {bookingDetails.endDate}
+                    {bookingDetails.startDate} -{" "}
+                    {bookingDetails.endDate}
                   </span>
                 </div>
-                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <div className="flex justify-between font-bold pt-2 border-t">
                   <span>Total ({currency})</span>
-                  <span>{formatPrice(bookingDetails.totalAmount)}</span>
+                  <span>
+                    {formatPrice(bookingDetails.totalAmount)}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Start Payment Button */}
+            {/* Button */}
             {!checkoutId && (
               <Button
                 onClick={startPayment}
@@ -279,7 +283,7 @@ export function CheckoutModal({
                 {processing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connecting to secure payment...
+                    Connecting...
                   </>
                 ) : (
                   "Proceed to Secure Payment"
@@ -287,16 +291,16 @@ export function CheckoutModal({
               </Button>
             )}
 
-            {/* Peach Embedded Checkout Container */}
+            {/* Checkout */}
             {checkoutId && (
               <div className="mt-4">
-                <div id="peach-checkout-container" className="min-h-[200px]" />
+                <div
+                  id="peach-checkout-container"
+                  style={{ minHeight: "300px" }}
+                />
                 {!sdkLoaded && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      Loading payment form...
-                    </span>
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="animate-spin" />
                   </div>
                 )}
               </div>
