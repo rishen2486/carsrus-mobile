@@ -1,6 +1,6 @@
 export const getPeachToken = async () => {
   const res = await fetch(
-    "https://YOUR_PROJECT.supabase.co/functions/v1/get-peach-token",
+    "https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/get-peach-token",
     {
       method: "POST",
       headers: {
