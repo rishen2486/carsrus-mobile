@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckoutModal } from '@/components/CheckoutModal';
-import Navbar from '@/components/layout/Navbar';
 
 interface Booking {
   id: string;
@@ -12,7 +11,6 @@ interface Booking {
   total_amount: number;
   pickup_location: string;
   dropoff_location: string;
-  customer_name: string;
   customer_email: string;
   payment_status: string;
   car: {
@@ -25,94 +23,66 @@ const BookingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    const fetchBooking = async () => {
+    const load = async () => {
       if (!id) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('bookings')
         .select('*, car:cars(name)')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error('Error fetching booking:', error);
+      if (!data) return;
+
+      setBooking(data);
+
+      if (data.payment_status === 'paid') {
+        navigate(`/booking/${data.id}/confirmation`);
       } else {
-        setBooking(data as Booking);
-
-        // ✅ AUTO OPEN CHECKOUT (KEY CHANGE)
-        if (data.payment_status !== 'paid') {
-          setIsCheckoutOpen(true);
-        } else {
-          // Already paid → go to confirmation
-          navigate(`/booking/${data.id}/confirmation`);
-        }
+        setIsCheckoutOpen(true); // AUTO OPEN
       }
-
-      setLoading(false);
     };
 
-    fetchBooking();
+    load();
   }, [id]);
 
   const handlePaymentSuccess = async () => {
-    try {
-      if (!booking) return;
+    if (!booking) return;
 
-      await supabase.functions.invoke('sync-booking', {
-        body: {
-          action: 'create',
-          bookingId: booking.id,
-          carId: booking.car_id,
-          carName: booking.car?.name,
-          startDate: booking.start_date,
-          endDate: booking.end_date,
-          pickupLocation: booking.pickup_location,
-          dropoffLocation: booking.dropoff_location,
-          customerEmail: booking.customer_email,
-        },
-      });
+    await supabase.functions.invoke('sync-booking', {
+      body: {
+        action: 'create',
+        bookingId: booking.id,
+        carId: booking.car_id,
+        carName: booking.car?.name,
+        startDate: booking.start_date,
+        endDate: booking.end_date,
+        pickupLocation: booking.pickup_location,
+        dropoffLocation: booking.dropoff_location,
+        customerEmail: booking.customer_email,
+      },
+    });
 
-      navigate(`/booking/${booking.id}/confirmation`);
-    } catch (error) {
-      console.error('Error in payment success flow:', error);
-      navigate(`/booking/${booking.id}/confirmation`);
-    }
+    navigate(`/booking/${booking.id}/confirmation`);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Preparing secure payment...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-
-      {/* ONLY checkout modal remains */}
+    <>
       {booking && booking.payment_status !== 'paid' && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
-          onClose={() => navigate('/cars')} // optional fallback
+          onClose={() => navigate('/cars')}
           bookingDetails={{
             id: booking.id,
-            carName: booking.car?.name || 'Car',
-            startDate: booking.start_date,
-            endDate: booking.end_date,
             totalAmount: booking.total_amount,
-            pickupLocation: booking.pickup_location,
-            dropoffLocation: booking.dropoff_location,
           }}
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
-    </div>
+    </>
   );
 };
 
