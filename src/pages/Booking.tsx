@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckoutModal } from '@/components/CheckoutModal';
+import Navbar from '@/components/layout/Navbar';
 
 interface Booking {
   id: string;
@@ -23,30 +24,35 @@ const BookingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
+    const fetchBooking = async () => {
       if (!id) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
         .select('*, car:cars(name)')
         .eq('id', id)
         .single();
 
-      if (!data) return;
-
-      setBooking(data);
-
-      if (data.payment_status === 'paid') {
-        navigate(`/booking/${data.id}/confirmation`);
+      if (error) {
+        console.error(error);
       } else {
-        setIsCheckoutOpen(true); // AUTO OPEN
+        setBooking(data as Booking);
+
+        if (data.payment_status !== 'paid') {
+          setIsCheckoutOpen(true);
+        } else {
+          navigate(`/booking/${data.id}/confirmation`);
+        }
       }
+
+      setLoading(false);
     };
 
-    load();
+    fetchBooking();
   }, [id]);
 
   const handlePaymentSuccess = async () => {
@@ -69,8 +75,18 @@ const BookingPage: React.FC = () => {
     navigate(`/booking/${booking.id}/confirmation`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Preparing secure payment...</p>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
       {booking && booking.payment_status !== 'paid' && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
@@ -82,7 +98,7 @@ const BookingPage: React.FC = () => {
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
-    </>
+    </div>
   );
 };
 
