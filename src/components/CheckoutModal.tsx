@@ -285,7 +285,7 @@ export function CheckoutModal({
             <div className="mt-4">
               <div
                 id="peach-checkout-container"
-                className="w-full min-h-[500px]"
+                className="w-full min-h-[650px] md:min-h-[700px]"
               />
               {!sdkLoaded && (
                 <div className="flex justify-center py-6">
