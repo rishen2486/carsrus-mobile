@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { CheckoutModal } from '@/components/CheckoutModal';
-import Navbar from '@/components/layout/Navbar';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { CheckoutModal } from "@/components/CheckoutModal";
+import Navbar from "@/components/layout/Navbar";
 
 interface Booking {
   id: string;
@@ -12,6 +12,7 @@ interface Booking {
   total_amount: number;
   pickup_location: string;
   dropoff_location: string;
+  customer_name: string;
   customer_email: string;
   payment_status: string;
   car: {
@@ -32,17 +33,18 @@ const BookingPage: React.FC = () => {
       if (!id) return;
 
       const { data, error } = await supabase
-        .from('bookings')
-        .select('*, car:cars(name)')
-        .eq('id', id)
+        .from("bookings")
+        .select("*, car:cars(name)")
+        .eq("id", id)
         .single();
 
       if (error) {
-        console.error(error);
+        console.error("Error fetching booking:", error);
       } else {
         setBooking(data as Booking);
 
-        if (data.payment_status !== 'paid') {
+        // AUTO OPEN CHECKOUT
+        if (data.payment_status !== "paid") {
           setIsCheckoutOpen(true);
         } else {
           navigate(`/booking/${data.id}/confirmation`);
@@ -56,23 +58,28 @@ const BookingPage: React.FC = () => {
   }, [id]);
 
   const handlePaymentSuccess = async () => {
-    if (!booking) return;
+    try {
+      if (!booking) return;
 
-    await supabase.functions.invoke('sync-booking', {
-      body: {
-        action: 'create',
-        bookingId: booking.id,
-        carId: booking.car_id,
-        carName: booking.car?.name,
-        startDate: booking.start_date,
-        endDate: booking.end_date,
-        pickupLocation: booking.pickup_location,
-        dropoffLocation: booking.dropoff_location,
-        customerEmail: booking.customer_email,
-      },
-    });
+      await supabase.functions.invoke("sync-booking", {
+        body: {
+          action: "create",
+          bookingId: booking.id,
+          carId: booking.car_id,
+          carName: booking.car?.name,
+          startDate: booking.start_date,
+          endDate: booking.end_date,
+          pickupLocation: booking.pickup_location,
+          dropoffLocation: booking.dropoff_location,
+          customerEmail: booking.customer_email,
+        },
+      });
 
-    navigate(`/booking/${booking.id}/confirmation`);
+      navigate(`/booking/${booking.id}/confirmation`);
+    } catch (error) {
+      console.error("Error in payment success flow:", error);
+      navigate(`/booking/${booking.id}/confirmation`);
+    }
   };
 
   if (loading) {
@@ -87,13 +94,18 @@ const BookingPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {booking && booking.payment_status !== 'paid' && (
+      {booking && booking.payment_status !== "paid" && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
-          onClose={() => navigate('/cars')}
+          onClose={() => navigate("/cars")}
           bookingDetails={{
             id: booking.id,
+            carName: booking.car?.name || "Car",
+            startDate: booking.start_date,
+            endDate: booking.end_date,
             totalAmount: booking.total_amount,
+            pickupLocation: booking.pickup_location,
+            dropoffLocation: booking.dropoff_location,
           }}
           onPaymentSuccess={handlePaymentSuccess}
         />
