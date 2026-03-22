@@ -6,9 +6,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 declare global {
   interface Window {
@@ -28,11 +30,13 @@ export function CheckoutModal({
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
   const checkoutRef = useRef<any>(null);
-  const { toast } = useToast();
 
-  /**
-   * STEP 1 — Create checkout
-   */
+  const { toast } = useToast();
+  const { formatPrice, currency } = useCurrency();
+
+  const murAmount = bookingDetails.totalAmount;
+
+  // STEP 1 — Call Supabase
   const startPayment = async () => {
     try {
       setProcessing(true);
@@ -42,7 +46,7 @@ export function CheckoutModal({
         {
           body: {
             bookingId: bookingDetails.id,
-            amount: bookingDetails.totalAmount,
+            amount: murAmount,
             currency: "MUR",
           },
         }
@@ -54,7 +58,7 @@ export function CheckoutModal({
       setCheckoutId(data.checkoutId);
       setEntityId(data.entityId);
     } catch (error) {
-      console.error(error);
+      console.error("Peach error:", error);
       toast({
         title: "Payment Error",
         description: "Could not start payment session.",
@@ -65,9 +69,7 @@ export function CheckoutModal({
     }
   };
 
-  /**
-   * STEP 2 — Load SDK
-   */
+  // STEP 2 — Load SDK
   useEffect(() => {
     if (window.Checkout) {
       setSdkLoaded(true);
@@ -92,17 +94,22 @@ export function CheckoutModal({
     document.body.appendChild(script);
   }, []);
 
-  /**
-   * STEP 3 — Render checkout
-   */
+  // STEP 3 — Render checkout
   useEffect(() => {
     if (!sdkLoaded || !checkoutId || !entityId) return;
     if (!window.Checkout) return;
 
+    const container = document.getElementById(
+      "peach-checkout-container"
+    );
+    if (!container) return;
+
+    // cleanup previous instance
     if (checkoutRef.current) {
       try {
         checkoutRef.current.unmount();
       } catch {}
+      checkoutRef.current = null;
     }
 
     try {
@@ -113,6 +120,9 @@ export function CheckoutModal({
         options: {
           paymentMethods: {
             include: ["CARD"],
+          },
+          ordering: {
+            CARD: 1,
           },
         },
 
@@ -138,7 +148,7 @@ export function CheckoutModal({
                 }
               );
             } catch (err) {
-              console.error(err);
+              console.error("Verify error:", err);
             }
 
             toast({
@@ -153,6 +163,7 @@ export function CheckoutModal({
           onCancelled: () => {
             toast({
               title: "Payment Cancelled",
+              description: "You cancelled the payment.",
               variant: "destructive",
             });
           },
@@ -160,6 +171,7 @@ export function CheckoutModal({
           onExpired: () => {
             toast({
               title: "Session Expired",
+              description: "Please try again.",
               variant: "destructive",
             });
             setCheckoutId(null);
@@ -183,9 +195,7 @@ export function CheckoutModal({
     }
   }, [sdkLoaded, checkoutId, entityId]);
 
-  /**
-   * Cleanup
-   */
+  // Cleanup
   useEffect(() => {
     if (!isOpen && checkoutRef.current) {
       try {
@@ -199,16 +209,52 @@ export function CheckoutModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-2xl h-[95vh] p-4">
+      <DialogContent className="max-w-3xl w-full max-h-[95vh]">
         <DialogHeader>
-          <DialogTitle>Secure Payment</DialogTitle>
+          <DialogTitle>Complete Your Booking</DialogTitle>
         </DialogHeader>
 
-        <div className="h-full overflow-auto space-y-4">
+        <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-4">
+          {/* Booking Summary */}
+          <Card className="text-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">
+                Booking Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span>Car:</span>
+                <span>{bookingDetails.carName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pickup:</span>
+                <span>{bookingDetails.pickupLocation}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Drop-off:</span>
+                <span>{bookingDetails.dropoffLocation}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Dates:</span>
+                <span>
+                  {bookingDetails.startDate} - {bookingDetails.endDate}
+                </span>
+              </div>
+              <div className="flex justify-between font-bold pt-2 border-t">
+                <span>Total ({currency})</span>
+                <span>
+                  {formatPrice(bookingDetails.totalAmount)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Button */}
           {!checkoutId && (
             <Button
               onClick={startPayment}
-              className="w-full h-12 text-lg"
+              className="w-full"
               disabled={processing}
             >
               {processing ? (
@@ -217,13 +263,24 @@ export function CheckoutModal({
                   Connecting...
                 </>
               ) : (
-                "Pay Now"
+                "Proceed to Secure Payment"
               )}
             </Button>
           )}
 
+          {/* Checkout */}
           {checkoutId && (
-            <div id="peach-checkout-container" className="w-full min-h-[600px]" />
+            <div className="mt-4">
+              <div
+                id="peach-checkout-container"
+                className="w-full min-h-[700px]"
+              />
+              {!sdkLoaded && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="animate-spin" />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </DialogContent>
