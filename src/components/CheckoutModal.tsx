@@ -2,15 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrency } from "@/contexts/CurrencyContext";
 
 declare global {
   interface Window {
@@ -30,14 +25,10 @@ export function CheckoutModal({
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
   const checkoutRef = useRef<any>(null);
-
   const { toast } = useToast();
-  const { formatPrice, currency } = useCurrency();
-
-  const murAmount = bookingDetails.totalAmount;
 
   /**
-   * STEP 1 — Call Supabase function
+   * STEP 1 — Create checkout session
    */
   const startPayment = async () => {
     try {
@@ -48,22 +39,22 @@ export function CheckoutModal({
         {
           body: {
             bookingId: bookingDetails.id,
-            amount: murAmount,
+            amount: bookingDetails.totalAmount,
             currency: "MUR",
           },
         }
       );
 
       if (error) throw error;
-      if (!data?.checkoutId) throw new Error("No checkoutId returned");
+      if (!data?.checkoutId) throw new Error("No checkoutId");
 
       setCheckoutId(data.checkoutId);
       setEntityId(data.entityId);
     } catch (error) {
-      console.error("Peach error:", error);
+      console.error(error);
       toast({
         title: "Payment Error",
-        description: "Could not start payment session.",
+        description: "Unable to start secure payment.",
         variant: "destructive",
       });
     } finally {
@@ -72,7 +63,7 @@ export function CheckoutModal({
   };
 
   /**
-   * STEP 2 — Load SDK ONCE
+   * STEP 2 — Load SDK
    */
   useEffect(() => {
     if (window.Checkout) {
@@ -81,16 +72,14 @@ export function CheckoutModal({
     }
 
     const script = document.createElement("script");
-    script.src =
-      "https://sandbox-checkout.peachpayments.com/js/checkout.js";
+    script.src = "https://sandbox-checkout.peachpayments.com/js/checkout.js";
     script.async = true;
 
     script.onload = () => setSdkLoaded(true);
-
     script.onerror = () => {
       toast({
-        title: "SDK Error",
-        description: "Failed to load payment SDK.",
+        title: "Error",
+        description: "Payment SDK failed to load.",
         variant: "destructive",
       });
     };
@@ -105,104 +94,73 @@ export function CheckoutModal({
     if (!sdkLoaded || !checkoutId || !entityId) return;
     if (!window.Checkout) return;
 
-    const container = document.getElementById(
-      "peach-checkout-container"
-    );
-    if (!container) return;
-
-    // Cleanup previous instance
     if (checkoutRef.current) {
       try {
         checkoutRef.current.unmount();
       } catch {}
-      checkoutRef.current = null;
     }
 
-    try {
-      const checkout = window.Checkout.initiate({
-        checkoutId,
-        key: entityId,
+    const checkout = window.Checkout.initiate({
+      checkoutId,
+      key: entityId,
 
-        options: {
-          paymentMethods: {
-            include: ["CARD"],
-          },
-          ordering: {
-            CARD: 1,
-          },
+      options: {
+        paymentMethods: {
+          include: ["CARD"], // ready for BLINK/JUICE later
+        },
+      },
+
+      customisations: {
+        showCancelButton: false,
+        showAmountField: false,
+        card: {
+          submitButtonText: "Pay Securely",
+          showBillingFields: false,
+        },
+      },
+
+      eventHandlers: {
+        onCompleted: async () => {
+          try {
+            await supabase.functions.invoke("verify-peach-payment", {
+              body: {
+                checkoutId,
+                bookingId: bookingDetails.id,
+              },
+            });
+          } catch (err) {
+            console.error(err);
+          }
+
+          onPaymentSuccess();
+          onClose();
         },
 
-        customisations: {
-          showCancelButton: false,
-          showAmountField: false,
-          card: {
-            submitButtonText: "Pay Now",
-            showBillingFields: false,
-          },
+        onError: (e: any) => {
+          toast({
+            title: "Payment Failed",
+            description: e?.result?.description || "Try again",
+            variant: "destructive",
+          });
         },
+      },
+    });
 
-        eventHandlers: {
-          onCompleted: async (event: any) => {
-            try {
-              await supabase.functions.invoke(
-                "verify-peach-payment",
-                {
-                  body: {
-                    checkoutId,
-                    bookingId: bookingDetails.id,
-                  },
-                }
-              );
-            } catch (err) {
-              console.error("Verify error:", err);
-            }
-
-            toast({
-              title: "Payment Successful!",
-              description: "Your booking has been confirmed.",
-            });
-
-            onPaymentSuccess();
-            onClose();
-          },
-
-          onCancelled: () => {
-            toast({
-              title: "Payment Cancelled",
-              description: "You cancelled the payment.",
-              variant: "destructive",
-            });
-          },
-
-          onExpired: () => {
-            toast({
-              title: "Session Expired",
-              description: "Please try again.",
-              variant: "destructive",
-            });
-            setCheckoutId(null);
-          },
-
-          onError: (event: any) => {
-            toast({
-              title: "Payment Failed",
-              description:
-                event?.result?.description || "Payment failed.",
-              variant: "destructive",
-            });
-          },
-        },
-      });
-
-      checkout.render("#peach-checkout-container");
-      checkoutRef.current = checkout;
-    } catch (err) {
-      console.error("Render error:", err);
-    }
+    checkout.render("#peach-checkout-container");
+    checkoutRef.current = checkout;
   }, [sdkLoaded, checkoutId, entityId]);
 
   /**
-   * Cleanup on close
+   * AUTO START PAYMENT (STRIPE STYLE)
+   */
+  useEffect(() => {
+    if (isOpen && !checkoutId) {
+      startPayment();
+    }
+  }, [isOpen]);
+
+  /**
+   * CLEANUP
    */
   useEffect(() => {
     if (!isOpen && checkoutRef.current) {
@@ -211,89 +169,45 @@ export function CheckoutModal({
       } catch {}
       checkoutRef.current = null;
       setCheckoutId(null);
-      setEntityId(null);
     }
   }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* ✅ FIXED WIDTH */}
-      <DialogContent className="max-w-3xl w-full max-h-[95vh]">
-        <DialogHeader>
-          <DialogTitle>Complete Your Booking</DialogTitle>
-        </DialogHeader>
+      {/* FULL SCREEN CHECKOUT */}
+      <DialogContent className="w-full h-screen max-w-none p-0">
 
-        {/* ✅ REMOVED SCROLLAREA */}
-        <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-4">
-          
-          {/* Booking Summary */}
-          <Card className="text-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">
-                Booking Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span>Car:</span>
-                <span>{bookingDetails.carName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Pickup:</span>
-                <span>{bookingDetails.pickupLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Drop-off:</span>
-                <span>{bookingDetails.dropoffLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Dates:</span>
-                <span>
-                  {bookingDetails.startDate} -{" "}
-                  {bookingDetails.endDate}
-                </span>
-              </div>
-              <div className="flex justify-between font-bold pt-2 border-t">
-                <span>Total ({currency})</span>
-                <span>
-                  {formatPrice(bookingDetails.totalAmount)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        {/* HEADER (STRIPE STYLE) */}
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ShieldCheck className="w-4 h-4 text-green-600" />
+            Secure Payment
+          </div>
+          <button
+            onClick={onClose}
+            className="text-sm text-muted-foreground"
+          >
+            Cancel
+          </button>
+        </div>
 
-          {/* Button */}
+        {/* CONTENT */}
+        <div className="h-full overflow-auto flex flex-col items-center">
+
           {!checkoutId && (
-            <Button
-              onClick={startPayment}
-              className="w-full"
-              disabled={processing}
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Proceed to Secure Payment"
-              )}
-            </Button>
-          )}
-
-          {/* ✅ FIXED CHECKOUT SIZE */}
-          {checkoutId && (
-            <div className="mt-4">
-              <div
-                id="peach-checkout-container"
-                className="w-full min-h-[700px] md:min-h-[700px]"
-              />
-              {!sdkLoaded && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="animate-spin" />
-                </div>
-              )}
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <Loader2 className="animate-spin w-6 h-6" />
+              <p className="text-sm text-muted-foreground">
+                Preparing secure checkout...
+              </p>
             </div>
           )}
+
+          <div
+            id="peach-checkout-container"
+            className="w-full max-w-md mt-6"
+          />
+
         </div>
       </DialogContent>
     </Dialog>
