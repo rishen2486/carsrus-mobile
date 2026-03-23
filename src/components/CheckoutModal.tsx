@@ -224,26 +224,40 @@ export function CheckoutModal({
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span>Car:</span>
-                <span>{bookingDetails.carName}</span>
+                <span className="text-muted-foreground">Car:</span>
+                <span className="font-medium">{bookingDetails.carName}</span>
               </div>
               <div className="flex justify-between">
-                <span>Pickup:</span>
-                <span>{bookingDetails.pickupLocation}</span>
+                <span className="text-muted-foreground">Start Date:</span>
+                <span className="font-medium">{bookingDetails.startDate}</span>
               </div>
               <div className="flex justify-between">
-                <span>Drop-off:</span>
-                <span>{bookingDetails.dropoffLocation}</span>
+                <span className="text-muted-foreground">End Date:</span>
+                <span className="font-medium">{bookingDetails.endDate}</span>
               </div>
               <div className="flex justify-between">
-                <span>Dates:</span>
-                <span>
-                  {bookingDetails.startDate} - {bookingDetails.endDate}
-                </span>
+                <span className="text-muted-foreground">Pickup Location:</span>
+                <span className="font-medium">{bookingDetails.pickupLocation}</span>
               </div>
-              <div className="flex justify-between font-bold pt-2 border-t">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Drop-off Location:</span>
+                <span className="font-medium">{bookingDetails.dropoffLocation}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer Name:</span>
+                <span className="font-medium">{bookingDetails.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer Email:</span>
+                <span className="font-medium">{bookingDetails.customerEmail}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment Status:</span>
+                <span className="font-medium capitalize">{bookingDetails.paymentStatus || 'pending'}</span>
+              </div>
+              <div className="flex justify-between font-bold pt-2 border-t border-border">
                 <span>Total ({currency})</span>
-                <span>
+                <span className="text-primary">
                   {formatPrice(bookingDetails.totalAmount)}
                 </span>
               </div>
