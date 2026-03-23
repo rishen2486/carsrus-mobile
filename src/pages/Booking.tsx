@@ -106,6 +106,9 @@ const BookingPage: React.FC = () => {
             totalAmount: booking.total_amount,
             pickupLocation: booking.pickup_location,
             dropoffLocation: booking.dropoff_location,
+            customerName: booking.customer_name,
+            customerEmail: booking.customer_email,
+            paymentStatus: booking.payment_status,
           }}
           onPaymentSuccess={handlePaymentSuccess}
         />
