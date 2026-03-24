@@ -58,6 +58,7 @@ export function CheckoutModal({
 
       setCheckoutId(data.checkoutId);
       setEntityId(data.entityId);
+      setStep("payment");
     } catch (error) {
       console.error("Peach error:", error);
       toast({
@@ -68,6 +69,16 @@ export function CheckoutModal({
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleBack = () => {
+    if (checkoutRef.current) {
+      try { checkoutRef.current.unmount(); } catch {}
+      checkoutRef.current = null;
+    }
+    setCheckoutId(null);
+    setEntityId(null);
+    setStep("summary");
   };
 
   // STEP 2 — Load SDK
