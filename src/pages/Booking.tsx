@@ -43,7 +43,6 @@ const BookingPage: React.FC = () => {
       } else {
         setBooking(data as Booking);
 
-        // AUTO OPEN CHECKOUT
         if (data.payment_status !== "paid") {
           setIsCheckoutOpen(true);
         } else {
@@ -110,6 +109,10 @@ const BookingPage: React.FC = () => {
             customerEmail: booking.customer_email,
             paymentStatus: booking.payment_status,
           }}
+          // 👇 IMPORTANT: ensure your modal uses this
+          bookingId={booking.id}
+          customerEmail={booking.customer_email}
+          amount={booking.total_amount}
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
