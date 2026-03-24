@@ -216,6 +216,7 @@ export function CheckoutModal({
       checkoutRef.current = null;
       setCheckoutId(null);
       setEntityId(null);
+      setStep("summary");
     }
   }, [isOpen]);
 
