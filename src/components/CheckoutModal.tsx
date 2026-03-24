@@ -224,90 +224,101 @@ export function CheckoutModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl w-full max-h-[95vh]">
         <DialogHeader>
-          <DialogTitle>Complete Your Booking</DialogTitle>
+          <DialogTitle>
+            {step === "summary" ? "Complete Your Booking" : "Payment Options"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-4">
-          {/* Booking Summary */}
-          <Card className="text-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">
-                Booking Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Car:</span>
-                <span className="font-medium">{bookingDetails.carName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Start Date:</span>
-                <span className="font-medium">{bookingDetails.startDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">End Date:</span>
-                <span className="font-medium">{bookingDetails.endDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Pickup Location:</span>
-                <span className="font-medium">{bookingDetails.pickupLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Drop-off Location:</span>
-                <span className="font-medium">{bookingDetails.dropoffLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Customer Name:</span>
-                <span className="font-medium">{bookingDetails.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Customer Email:</span>
-                <span className="font-medium">{bookingDetails.customerEmail}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Payment Status:</span>
-                <span className="font-medium capitalize">{bookingDetails.paymentStatus || 'pending'}</span>
-              </div>
-              <div className="flex justify-between font-bold pt-2 border-t border-border">
-                <span>Total ({currency})</span>
-                <span className="text-primary">
-                  {formatPrice(bookingDetails.totalAmount)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Step 1: Booking Summary */}
+          {step === "summary" && (
+            <>
+              <Card className="text-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Booking Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Car:</span>
+                    <span className="font-medium">{bookingDetails.carName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Start Date:</span>
+                    <span className="font-medium">{bookingDetails.startDate}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">End Date:</span>
+                    <span className="font-medium">{bookingDetails.endDate}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pickup Location:</span>
+                    <span className="font-medium">{bookingDetails.pickupLocation}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Drop-off Location:</span>
+                    <span className="font-medium">{bookingDetails.dropoffLocation}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Customer Name:</span>
+                    <span className="font-medium">{bookingDetails.customerName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Customer Email:</span>
+                    <span className="font-medium">{bookingDetails.customerEmail}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Status:</span>
+                    <span className="font-medium capitalize">{bookingDetails.paymentStatus || 'pending'}</span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-2 border-t border-border">
+                    <span>Total ({currency})</span>
+                    <span className="text-primary">
+                      {formatPrice(bookingDetails.totalAmount)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Button */}
-          {!checkoutId && (
-            <Button
-              onClick={startPayment}
-              className="w-full"
-              disabled={processing}
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Proceed to Secure Payment"
-              )}
-            </Button>
+              <Button
+                onClick={startPayment}
+                className="w-full"
+                disabled={processing}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Proceed to Secure Payment"
+                )}
+              </Button>
+            </>
           )}
 
-          {/* Checkout */}
-          {checkoutId && (
-            <div className="mt-4">
-              <div
-                id="peach-checkout-container"
-                className="w-full min-h-[900px]"
-              />
-              {!sdkLoaded && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="animate-spin" />
-                </div>
-              )}
-            </div>
+          {/* Step 2: Payment Options */}
+          {step === "payment" && checkoutId && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                className="mb-2"
+              >
+                ← Back to Booking Summary
+              </Button>
+
+              <div>
+                <div
+                  id="peach-checkout-container"
+                  className="w-full min-h-[900px]"
+                />
+                {!sdkLoaded && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="animate-spin" />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </DialogContent>
