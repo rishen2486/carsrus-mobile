@@ -28,6 +28,7 @@ export function CheckoutModal({
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [step, setStep] = useState<"summary" | "payment">("summary");
 
   const checkoutRef = useRef<any>(null);
 
