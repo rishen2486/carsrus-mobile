@@ -461,6 +461,12 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthenticated={handleAuthSuccess}
+      />
     </div>
   );
 }
