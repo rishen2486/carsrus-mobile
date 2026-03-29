@@ -172,7 +172,7 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
       const { data: booking, error } = await supabase
         .from('bookings')
         .insert({
-          user_id: user?.id || null,
+          user_id: user.id,
           car_id: car.id,
           customer_name: formData.customerName,
           customer_email: formData.customerEmail,
