@@ -34,6 +34,8 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
   const { formatPrice, convertPrice, currency, exchangeRates } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [locations, setLocations] = useState<string[]>([]);
   const [formData, setFormData] = useState({
