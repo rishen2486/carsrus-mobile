@@ -117,12 +117,30 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if user is authenticated first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setPendingSubmitEvent(e);
+      setShowAuthModal(true);
+      return;
+    }
+
+    await processBooking(user);
+  };
+
+  const handleAuthSuccess = async () => {
+    setShowAuthModal(false);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await processBooking(user);
+    }
+  };
+
+  const processBooking = async (user: any) => {
     setLoading(true);
 
     try {
-      // Get current user if authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      
       const totalAmount = calculateTotalAmount();
       
       if (totalAmount <= 0) {
