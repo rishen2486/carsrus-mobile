@@ -60,6 +60,7 @@ export type Database = {
         Row: {
           booking_date: string | null
           car_id: string | null
+          checkout_id: string | null
           created_at: string | null
           customer_email: string
           customer_name: string
@@ -79,6 +80,7 @@ export type Database = {
         Insert: {
           booking_date?: string | null
           car_id?: string | null
+          checkout_id?: string | null
           created_at?: string | null
           customer_email: string
           customer_name: string
@@ -98,6 +100,7 @@ export type Database = {
         Update: {
           booking_date?: string | null
           car_id?: string | null
+          checkout_id?: string | null
           created_at?: string | null
           customer_email?: string
           customer_name?: string
@@ -261,6 +264,56 @@ export type Database = {
           Region?: string | null
         }
         Relationships: []
+      }
+      payment_logs: {
+        Row: {
+          amount: number | null
+          booking_id: string | null
+          checkout_id: string | null
+          created_at: string | null
+          currency: string | null
+          customer_email: string | null
+          id: string
+          payment_brand: string | null
+          payment_status: string | null
+          raw_payload: Json | null
+          result_code: string | null
+        }
+        Insert: {
+          amount?: number | null
+          booking_id?: string | null
+          checkout_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          customer_email?: string | null
+          id?: string
+          payment_brand?: string | null
+          payment_status?: string | null
+          raw_payload?: Json | null
+          result_code?: string | null
+        }
+        Update: {
+          amount?: number | null
+          booking_id?: string | null
+          checkout_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          customer_email?: string | null
+          id?: string
+          payment_brand?: string | null
+          payment_status?: string | null
+          raw_payload?: Json | null
+          result_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

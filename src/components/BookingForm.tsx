@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar as CalendarIcon, MapPin, User, Mail, Phone, X, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthRequiredModal } from '@/components/auth/AuthRequiredModal';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,8 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
   const { formatPrice, convertPrice, currency, exchangeRates } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [locations, setLocations] = useState<string[]>([]);
   const [formData, setFormData] = useState({
@@ -114,12 +117,30 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if user is authenticated first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setPendingSubmitEvent(e);
+      setShowAuthModal(true);
+      return;
+    }
+
+    await processBooking(user);
+  };
+
+  const handleAuthSuccess = async () => {
+    setShowAuthModal(false);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await processBooking(user);
+    }
+  };
+
+  const processBooking = async (user: any) => {
     setLoading(true);
 
     try {
-      // Get current user if authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      
       const totalAmount = calculateTotalAmount();
       
       if (totalAmount <= 0) {
@@ -151,7 +172,7 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
       const { data: booking, error } = await supabase
         .from('bookings')
         .insert({
-          user_id: user?.id || null,
+          user_id: user.id,
           car_id: car.id,
           customer_name: formData.customerName,
           customer_email: formData.customerEmail,
@@ -440,6 +461,12 @@ export function BookingForm({ car, onClose }: BookingFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthenticated={handleAuthSuccess}
+      />
     </div>
   );
 }
