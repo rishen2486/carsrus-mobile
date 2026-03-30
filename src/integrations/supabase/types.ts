@@ -59,6 +59,7 @@ export type Database = {
       bookings: {
         Row: {
           booking_date: string | null
+          booking_ref: string | null
           car_id: string | null
           checkout_id: string | null
           created_at: string | null
@@ -79,6 +80,7 @@ export type Database = {
         }
         Insert: {
           booking_date?: string | null
+          booking_ref?: string | null
           car_id?: string | null
           checkout_id?: string | null
           created_at?: string | null
@@ -99,6 +101,7 @@ export type Database = {
         }
         Update: {
           booking_date?: string | null
+          booking_ref?: string | null
           car_id?: string | null
           checkout_id?: string | null
           created_at?: string | null
