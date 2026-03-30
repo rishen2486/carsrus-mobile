@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Car, Menu, X, User, Settings, LogOut, Edit, Calendar, Gift } from "lucide-react";
+import { Menu, X, User, Settings, LogOut, Edit, Calendar, Gift } from "lucide-react";
+import logoImg from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
