@@ -103,7 +103,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center group">
-            <img src={logoImg} alt="CarsRus Rental" className="h-12 w-auto group-hover:scale-105 transition-transform duration-300" />
+            <img src={logoImg} alt="CarsRus Rental" className="h-16 w-auto group-hover:scale-105 transition-transform duration-300" />
           </Link>
 
           {/* Desktop Navigation */}
