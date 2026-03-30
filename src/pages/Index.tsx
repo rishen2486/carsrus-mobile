@@ -125,6 +125,45 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Featured Cars Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Featured Vehicles
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Explore our handpicked selection of premium vehicles
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {loading ? (
+              <div className="col-span-full text-center py-8">
+                <p className="text-lg">Loading featured cars...</p>
+              </div>
+            ) : featuredCars.length > 0 ? (
+              featuredCars.map((car) => (
+                <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground">No featured cars available at the moment.</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="text-center">
+            <Button size="lg" variant="outline" className="px-8" asChild>
+              <Link to="/cars">
+                View All Cars
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -170,45 +209,6 @@ const Index = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Cars Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Featured Vehicles
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Explore our handpicked selection of premium vehicles
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {loading ? (
-              <div className="col-span-full text-center py-8">
-                <p className="text-lg">Loading featured cars...</p>
-              </div>
-            ) : featuredCars.length > 0 ? (
-              featuredCars.map((car) => (
-                <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-8">
-                <p className="text-muted-foreground">No featured cars available at the moment.</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="text-center">
-            <Button size="lg" variant="outline" className="px-8" asChild>
-              <Link to="/cars">
-                View All Cars
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
           </div>
         </div>
       </section>
