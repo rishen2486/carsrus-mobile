@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Car, Menu, X, User, Settings, LogOut, Edit, Calendar, Gift } from "lucide-react";
+import { Menu, X, User, Settings, LogOut, Edit, Calendar, Gift } from "lucide-react";
+import logoImg from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,13 +102,8 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
-            <div className="p-2 rounded-lg bg-gradient-primary text-primary-foreground group-hover:scale-110 transition-transform duration-300">
-              <Car className="h-6 w-6" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-              CarsRus Rental
-            </span>
+          <Link to="/" className="flex items-center group">
+            <img src={logoImg} alt="CarsRus Rental" className="h-12 w-auto group-hover:scale-105 transition-transform duration-300" />
           </Link>
 
           {/* Desktop Navigation */}
