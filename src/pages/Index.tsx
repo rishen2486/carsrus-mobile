@@ -10,6 +10,7 @@ import Navbar from "@/components/layout/Navbar";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Car {
   id: string;
@@ -32,6 +33,7 @@ const Index = () => {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState<string>("Mauritius");
   const { toast } = useToast();
 
   // Fetch all cars
@@ -128,13 +130,29 @@ const Index = () => {
       {/* Featured Cars Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Featured Vehicles
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
               Explore our handpicked selection of premium vehicles
             </p>
+            <div className="flex justify-center gap-4">
+              <Button
+                size="lg"
+                className={cn("px-8", selectedCountry === "Mauritius" ? "" : "bg-primary/20 text-primary hover:bg-primary/30")}
+                onClick={() => setSelectedCountry("Mauritius")}
+              >
+                Mauritius
+              </Button>
+              <Button
+                size="lg"
+                className={cn("px-8", selectedCountry === "Rodrigues" ? "" : "bg-primary/20 text-primary hover:bg-primary/30")}
+                onClick={() => setSelectedCountry("Rodrigues")}
+              >
+                Rodrigues
+              </Button>
+            </div>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -142,13 +160,13 @@ const Index = () => {
               <div className="col-span-full text-center py-8">
                 <p className="text-lg">Loading featured cars...</p>
               </div>
-            ) : featuredCars.length > 0 ? (
-              featuredCars.map((car) => (
+            ) : featuredCars.filter(car => car.country === selectedCountry).length > 0 ? (
+              featuredCars.filter(car => car.country === selectedCountry).map((car) => (
                 <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
               ))
             ) : (
               <div className="col-span-full text-center py-8">
-                <p className="text-muted-foreground">No featured cars available at the moment.</p>
+                <p className="text-muted-foreground">No cars available in {selectedCountry} at the moment.</p>
               </div>
             )}
           </div>
