@@ -22,6 +22,7 @@ import LoyaltyRewards from "./pages/LoyaltyRewards";
 
 /* ✅ ADD THIS IMPORT */
 import PaymentResult from "./pages/PaymentResult";
+import Policies from "./pages/Policies";
 
 const queryClient = new QueryClient();
 
