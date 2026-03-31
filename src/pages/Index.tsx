@@ -7,6 +7,7 @@ import SearchBar, { SearchFilters } from "@/components/search/SearchBar";
 import CarCard from "@/components/cars/CarCard";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";

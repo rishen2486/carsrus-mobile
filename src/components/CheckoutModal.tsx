@@ -282,10 +282,24 @@ export function CheckoutModal({
                 </CardContent>
               </Card>
 
+              <div className="flex items-start space-x-2 pt-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                />
+                <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                  I agree to the{" "}
+                  <Link to="/terms" target="_blank" className="text-primary underline hover:text-primary/80">
+                    Terms & Conditions
+                  </Link>
+                </label>
+              </div>
+
               <Button
                 onClick={startPayment}
                 className="w-full"
-                disabled={processing}
+                disabled={processing || !agreedToTerms}
               >
                 {processing ? (
                   <>

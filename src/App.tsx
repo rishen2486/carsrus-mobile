@@ -53,6 +53,9 @@ const App = () => (
         {/* ✅ ADD THIS ROUTE */}
         <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/policies" element={<Policies />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
 
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
