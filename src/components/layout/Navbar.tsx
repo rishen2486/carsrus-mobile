@@ -114,7 +114,7 @@ const Navbar = () => {
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  "text-sm font-medium transition-colors duration-200 relative",
+                  "text-base font-medium transition-colors duration-200 relative",
                   isActive(link.href)
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
