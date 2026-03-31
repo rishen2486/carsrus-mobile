@@ -23,6 +23,9 @@ import LoyaltyRewards from "./pages/LoyaltyRewards";
 /* ✅ ADD THIS IMPORT */
 import PaymentResult from "./pages/PaymentResult";
 import Policies from "./pages/Policies";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import RefundPolicy from "./pages/RefundPolicy";
 
 const queryClient = new QueryClient();
 
