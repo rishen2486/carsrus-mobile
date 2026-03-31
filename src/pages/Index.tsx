@@ -129,13 +129,29 @@ const Index = () => {
       {/* Featured Cars Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Featured Vehicles
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
               Explore our handpicked selection of premium vehicles
             </p>
+            <div className="flex justify-center gap-4">
+              <Button
+                size="lg"
+                className={cn("px-8", selectedCountry === "Mauritius" ? "" : "bg-primary/20 text-primary hover:bg-primary/30")}
+                onClick={() => setSelectedCountry("Mauritius")}
+              >
+                Mauritius
+              </Button>
+              <Button
+                size="lg"
+                className={cn("px-8", selectedCountry === "Rodrigues" ? "" : "bg-primary/20 text-primary hover:bg-primary/30")}
+                onClick={() => setSelectedCountry("Rodrigues")}
+              >
+                Rodrigues
+              </Button>
+            </div>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
