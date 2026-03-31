@@ -160,13 +160,13 @@ const Index = () => {
               <div className="col-span-full text-center py-8">
                 <p className="text-lg">Loading featured cars...</p>
               </div>
-            ) : featuredCars.length > 0 ? (
-              featuredCars.map((car) => (
+            ) : featuredCars.filter(car => car.country === selectedCountry).length > 0 ? (
+              featuredCars.filter(car => car.country === selectedCountry).map((car) => (
                 <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
               ))
             ) : (
               <div className="col-span-full text-center py-8">
-                <p className="text-muted-foreground">No featured cars available at the moment.</p>
+                <p className="text-muted-foreground">No cars available in {selectedCountry} at the moment.</p>
               </div>
             )}
           </div>
