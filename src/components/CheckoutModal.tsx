@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +31,7 @@ export function CheckoutModal({
   const [entityId, setEntityId] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [step, setStep] = useState<"summary" | "payment">("summary");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const checkoutRef = useRef<any>(null);
 
@@ -279,10 +282,24 @@ export function CheckoutModal({
                 </CardContent>
               </Card>
 
+              <div className="flex items-start space-x-2 pt-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                />
+                <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                  I agree to the{" "}
+                  <Link to="/terms" target="_blank" className="text-primary underline hover:text-primary/80">
+                    Terms & Conditions
+                  </Link>
+                </label>
+              </div>
+
               <Button
                 onClick={startPayment}
                 className="w-full"
-                disabled={processing}
+                disabled={processing || !agreedToTerms}
               >
                 {processing ? (
                   <>
