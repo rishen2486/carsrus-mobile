@@ -17,11 +17,15 @@ export default function CheckoutModal({
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [step, setStep] = useState<"summary" | "payment">("summary");
+  const [agreed, setAgreed] = useState(false);
 
   const checkoutRef = useRef<any>(null);
   const { toast } = useToast();
 
-  // 🔹 STEP 1 — Call Supabase
+  // ==========================
+  // STEP 1 — CREATE CHECKOUT
+  // ==========================
   const startPayment = async () => {
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -41,6 +45,7 @@ export default function CheckoutModal({
 
       setCheckoutId(data.checkoutId);
       setEntityId(data.entityId);
+      setStep("payment");
     } catch (error) {
       console.error("Peach error:", error);
       toast({
@@ -51,7 +56,9 @@ export default function CheckoutModal({
     }
   };
 
-  // 🔹 STEP 2 — Load SDK
+  // ==========================
+  // STEP 2 — LOAD SDK
+  // ==========================
   useEffect(() => {
     if (window.Checkout) {
       setSdkLoaded(true);
@@ -68,7 +75,9 @@ export default function CheckoutModal({
     document.body.appendChild(script);
   }, []);
 
-  // 🔹 STEP 3 — Render checkout
+  // ==========================
+  // STEP 3 — RENDER CHECKOUT
+  // ==========================
   useEffect(() => {
     if (!sdkLoaded || !checkoutId || !entityId) return;
     if (!window.Checkout) return;
@@ -142,6 +151,7 @@ export default function CheckoutModal({
               variant: "destructive",
             });
             setCheckoutId(null);
+            setStep("summary");
           },
 
           onError: (event: any) => {
@@ -164,18 +174,88 @@ export default function CheckoutModal({
     }
   }, [sdkLoaded, checkoutId, entityId]);
 
-  return (
-    <div>
-      {!checkoutId && (
-        <button onClick={startPayment}>
-          Proceed to Secure Payment
-        </button>
-      )}
+  // ==========================
+  // RESET WHEN CLOSED
+  // ==========================
+  useEffect(() => {
+    if (!isOpen) {
+      setCheckoutId(null);
+      setEntityId(null);
+      setStep("summary");
+      setAgreed(false);
 
-      <div
-        id="peach-checkout-container"
-        className="w-full min-h-[600px]"
-      />
+      if (checkoutRef.current) {
+        try {
+          checkoutRef.current.unmount();
+        } catch {}
+      }
+    }
+  }, [isOpen]);
+
+  // ==========================
+  // UI
+  // ==========================
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+      <div className="bg-white w-full max-w-2xl p-6 rounded-xl space-y-4 max-h-[90vh] overflow-y-auto">
+
+        {/* STEP 1 — SUMMARY */}
+        {step === "summary" && (
+          <>
+            <h2 className="text-xl font-bold">Booking Summary</h2>
+
+            <div className="space-y-2 text-sm">
+              <div><b>Car:</b> {bookingDetails.carName}</div>
+              <div><b>Start:</b> {bookingDetails.startDate}</div>
+              <div><b>End:</b> {bookingDetails.endDate}</div>
+              <div><b>Total:</b> MUR {bookingDetails.totalAmount}</div>
+              <div><b>Email:</b> {bookingDetails.customerEmail}</div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+              />
+              <span className="text-sm">
+                I agree to Terms & Conditions
+              </span>
+            </div>
+
+            <button
+              onClick={startPayment}
+              disabled={!agreed}
+              className="w-full bg-black text-white py-2 rounded disabled:opacity-50"
+            >
+              Proceed to Secure Payment
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-full border py-2 rounded"
+            >
+              Cancel
+            </button>
+          </>
+        )}
+
+        {/* STEP 2 — PAYMENT */}
+        {step === "payment" && (
+          <>
+            <button
+              onClick={() => setStep("summary")}
+              className="mb-2 text-sm underline"
+            >
+              ← Back
+            </button>
+
+            <div id="peach-checkout-container" />
+          </>
+        )}
+      </div>
     </div>
   );
 }
