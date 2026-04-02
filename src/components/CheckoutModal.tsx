@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 declare global {
   interface Window {
@@ -14,11 +25,12 @@ export default function CheckoutModal({
   bookingDetails,
   onPaymentSuccess,
 }: any) {
+  const [processing, setProcessing] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [step, setStep] = useState<"summary" | "payment">("summary");
-  const [agreed, setAgreed] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const checkoutRef = useRef<any>(null);
   const { toast } = useToast();
@@ -28,6 +40,8 @@ export default function CheckoutModal({
   // ==========================
   const startPayment = async () => {
     try {
+      setProcessing(true);
+
       const { data, error } = await supabase.functions.invoke(
         "create-peach-checkout",
         {
@@ -53,6 +67,8 @@ export default function CheckoutModal({
         description: "Could not start payment session.",
         variant: "destructive",
       });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -71,6 +87,14 @@ export default function CheckoutModal({
     script.async = true;
 
     script.onload = () => setSdkLoaded(true);
+
+    script.onerror = () => {
+      toast({
+        title: "SDK Error",
+        description: "Failed to load payment SDK.",
+        variant: "destructive",
+      });
+    };
 
     document.body.appendChild(script);
   }, []);
@@ -182,7 +206,7 @@ export default function CheckoutModal({
       setCheckoutId(null);
       setEntityId(null);
       setStep("summary");
-      setAgreed(false);
+      setAgreedToTerms(false);
 
       if (checkoutRef.current) {
         try {
@@ -195,67 +219,101 @@ export default function CheckoutModal({
   // ==========================
   // UI
   // ==========================
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-2xl p-6 rounded-xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl w-full max-h-[95vh]">
+        <DialogHeader>
+          <DialogTitle>
+            {step === "summary"
+              ? "Complete Your Booking"
+              : "Payment Options"}
+          </DialogTitle>
+        </DialogHeader>
 
-        {/* STEP 1 — SUMMARY */}
-        {step === "summary" && (
-          <>
-            <h2 className="text-xl font-bold">Booking Summary</h2>
+        <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-4">
 
-            <div className="space-y-2 text-sm">
-              <div><b>Car:</b> {bookingDetails.carName}</div>
-              <div><b>Start:</b> {bookingDetails.startDate}</div>
-              <div><b>End:</b> {bookingDetails.endDate}</div>
-              <div><b>Total:</b> MUR {bookingDetails.totalAmount}</div>
-              <div><b>Email:</b> {bookingDetails.customerEmail}</div>
-            </div>
+          {/* STEP 1 — SUMMARY */}
+          {step === "summary" && (
+            <>
+              <Card className="text-sm">
+                <CardHeader>
+                  <CardTitle>Booking Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div><b>Car:</b> {bookingDetails.carName}</div>
+                  <div><b>Start:</b> {bookingDetails.startDate}</div>
+                  <div><b>End:</b> {bookingDetails.endDate}</div>
+                  <div><b>Email:</b> {bookingDetails.customerEmail}</div>
+                  <div className="pt-2 border-t font-bold">
+                    Total: MUR {bookingDetails.totalAmount}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) =>
+                    setAgreedToTerms(checked === true)
+                  }
+                />
+                <label
+                  htmlFor="terms"
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  I agree to the{" "}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    className="underline"
+                  >
+                    Terms & Conditions
+                  </Link>
+                </label>
+              </div>
+
+              <Button
+                onClick={startPayment}
+                disabled={processing || !agreedToTerms}
+                className="w-full"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Proceed to Secure Payment"
+                )}
+              </Button>
+            </>
+          )}
+
+          {/* STEP 2 — PAYMENT */}
+          {step === "payment" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setStep("summary")}
+              >
+                ← Back
+              </Button>
+
+              <div
+                id="peach-checkout-container"
+                className="w-full min-h-[700px]"
               />
-              <span className="text-sm">
-                I agree to Terms & Conditions
-              </span>
-            </div>
 
-            <button
-              onClick={startPayment}
-              disabled={!agreed}
-              className="w-full bg-black text-white py-2 rounded disabled:opacity-50"
-            >
-              Proceed to Secure Payment
-            </button>
-
-            <button
-              onClick={onClose}
-              className="w-full border py-2 rounded"
-            >
-              Cancel
-            </button>
-          </>
-        )}
-
-        {/* STEP 2 — PAYMENT */}
-        {step === "payment" && (
-          <>
-            <button
-              onClick={() => setStep("summary")}
-              className="mb-2 text-sm underline"
-            >
-              ← Back
-            </button>
-
-            <div id="peach-checkout-container" />
-          </>
-        )}
-      </div>
-    </div>
+              {!sdkLoaded && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="animate-spin" />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
