@@ -98,7 +98,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
-      const res = await fetch(""https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler", {
+      const res = await fetch("https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
