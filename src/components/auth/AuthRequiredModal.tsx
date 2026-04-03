@@ -17,9 +17,17 @@ interface AuthRequiredModalProps {
 export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequiredModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ name: '', email: '', password: '', phone: '' });
 
+  // ✅ NEW STATE FOR OTP FLOW
+  const [step, setStep] = useState<'signup' | 'otp'>('signup');
+  const [otp, setOtp] = useState('');
+
+  // =========================
+  // LOGIN (UNCHANGED)
+  // =========================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,10 +48,75 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(false);
   };
 
+  // =========================
+  // SIGNUP → SEND OTP
+  // =========================
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
+      const res = await fetch("/functions/v1/otp-handler", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "send",
+          email: signupData.email,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to send OTP");
+      }
+
+      toast({
+        title: "OTP Sent",
+        description: "Check your email for the verification code",
+      });
+
+      setStep("otp"); // ✅ switch to OTP UI
+
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+
+    setLoading(false);
+  };
+
+  // =========================
+  // VERIFY OTP → CREATE USER
+  // =========================
+  const handleVerifyOtp = async () => {
+    setLoading(true);
+
+    try {
+      const res = await fetch("/functions/v1/otp-handler", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "verify",
+          email: signupData.email,
+          otp,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Invalid OTP");
+      }
+
+      // ✅ NOW create user
       const { error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
@@ -55,15 +128,24 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
           },
         },
       });
-      if (error) {
-        toast({ title: "Sign Up Failed", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: "Account created! You are now signed in." });
-        onAuthenticated();
-      }
-    } catch {
-      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Account created successfully!",
+      });
+
+      onAuthenticated();
+
+    } catch (err: any) {
+      toast({
+        title: "Verification Failed",
+        description: err.message,
+        variant: "destructive",
+      });
     }
+
     setLoading(false);
   };
 
@@ -87,6 +169,9 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
             </TabsTrigger>
           </TabsList>
 
+          {/* ========================= */}
+          {/* SIGN IN (UNCHANGED) */}
+          {/* ========================= */}
           <TabsContent value="signin">
             <form onSubmit={handleLogin} className="space-y-4 pt-2">
               <div className="space-y-2">
@@ -117,53 +202,93 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
             </form>
           </TabsContent>
 
+          {/* ========================= */}
+          {/* SIGN UP WITH OTP */}
+          {/* ========================= */}
           <TabsContent value="signup">
-            <form onSubmit={handleSignup} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="signup-name">Full Name</Label>
-                <Input
-                  id="signup-name"
-                  value={signupData.name}
-                  onChange={(e) => setSignupData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="John Doe"
-                  required
-                />
+
+            {step === "signup" && (
+              <form onSubmit={handleSignup} className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input
+                    id="signup-name"
+                    value={signupData.name}
+                    onChange={(e) => setSignupData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={signupData.email}
+                    onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="john@example.com"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number</Label>
+                  <Input
+                    id="signup-phone"
+                    value={signupData.phone}
+                    onChange={(e) => setSignupData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+230 5XXX XXXX"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={signupData.password}
+                    onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Min 6 characters"
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Sending OTP...' : 'Create Account & Continue'}
+                </Button>
+              </form>
+            )}
+
+            {step === "otp" && (
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label>Enter OTP</Label>
+                  <Input
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="6-digit code"
+                  />
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                >
+                  {loading ? "Verifying..." : "Verify OTP & Create Account"}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setStep("signup")}
+                >
+                  Go Back
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">Phone Number</Label>
-                <Input
-                  id="signup-phone"
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="+230 5XXX XXXX"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Min 6 characters"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Account & Continue'}
-              </Button>
-            </form>
+            )}
+
           </TabsContent>
         </Tabs>
       </DialogContent>
