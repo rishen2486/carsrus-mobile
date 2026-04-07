@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,30 +20,35 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ name: '', email: '', password: '', phone: '' });
 
-  // ✅ NEW STATE FOR OTP FLOW
   const [step, setStep] = useState<'signup' | 'otp'>('signup');
   const [otp, setOtp] = useState('');
 
   // =========================
-  // LOGIN (UNCHANGED)
+  // LOGIN
   // =========================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
       });
-      if (error) {
-        toast({ title: "Login Failed", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: "Signed in successfully!" });
-        onAuthenticated();
-      }
-    } catch {
-      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Signed in successfully!" });
+      onAuthenticated();
+
+    } catch (err: any) {
+      toast({
+        title: "Login Failed",
+        description: err.message,
+        variant: "destructive"
+      });
     }
+
     setLoading(false);
   };
 
@@ -56,21 +60,28 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
-      const res = await fetch("https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler", {
-        method: "POST",
-        headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          action: "send",
-          email: signupData.email,
-        }),
-      });
+      console.log("🚀 Sending OTP...");
+      console.log("KEY:", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+
+      const res = await fetch(
+        "https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            action: "send",
+            email: signupData.email,
+          }),
+        }
+      );
 
       const data = await res.json();
+      console.log("OTP RESPONSE:", data);
 
-      if (!data.success) {
+      if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to send OTP");
       }
 
@@ -79,9 +90,11 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
         description: "Check your email for the verification code",
       });
 
-      setStep("otp"); // ✅ switch to OTP UI
+      setStep("otp");
 
     } catch (err: any) {
+      console.error("❌ SEND OTP ERROR:", err);
+
       toast({
         title: "Error",
         description: err.message,
@@ -99,25 +112,32 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
-      const res = await fetch("https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "verify",
-          email: signupData.email,
-          otp,
-        }),
-      });
+      console.log("🔐 Verifying OTP...");
+
+      const res = await fetch(
+        "https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            action: "verify",
+            email: signupData.email,
+            otp: otp.trim(),
+          }),
+        }
+      );
 
       const data = await res.json();
+      console.log("VERIFY RESPONSE:", data);
 
-      if (!data.success) {
+      if (!res.ok || !data.success) {
         throw new Error(data.error || "Invalid OTP");
       }
 
-      // ✅ NOW create user
+      // Create user after OTP success
       const { error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
@@ -140,6 +160,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
       onAuthenticated();
 
     } catch (err: any) {
+      console.error("❌ VERIFY ERROR:", err);
+
       toast({
         title: "Verification Failed",
         description: err.message,
@@ -162,99 +184,67 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
         <Tabs defaultValue="signin" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin" className="flex items-center gap-2">
+            <TabsTrigger value="signin">
               <LogIn className="h-4 w-4" /> Sign In
             </TabsTrigger>
-            <TabsTrigger value="signup" className="flex items-center gap-2">
+            <TabsTrigger value="signup">
               <UserPlus className="h-4 w-4" /> Sign Up
             </TabsTrigger>
           </TabsList>
 
-          {/* ========================= */}
-          {/* SIGN IN (UNCHANGED) */}
-          {/* ========================= */}
+          {/* SIGN IN */}
           <TabsContent value="signin">
             <form onSubmit={handleLogin} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter your password"
-                  required
-                />
-              </div>
+              <Input
+                type="email"
+                value={loginData.email}
+                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))}
+                placeholder="Email"
+                required
+              />
+              <Input
+                type="password"
+                value={loginData.password}
+                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))}
+                placeholder="Password"
+                required
+              />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
           </TabsContent>
 
-          {/* ========================= */}
-          {/* SIGN UP WITH OTP */}
-          {/* ========================= */}
+          {/* SIGN UP */}
           <TabsContent value="signup">
 
             {step === "signup" && (
               <form onSubmit={handleSignup} className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    value={signupData.name}
-                    onChange={(e) => setSignupData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone">Phone Number</Label>
-                  <Input
-                    id="signup-phone"
-                    value={signupData.phone}
-                    onChange={(e) => setSignupData(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+230 5XXX XXXX"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Min 6 characters"
-                    required
-                  />
-                </div>
-
+                <Input
+                  value={signupData.name}
+                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Full Name"
+                  required
+                />
+                <Input
+                  type="email"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))}
+                  placeholder="Email"
+                  required
+                />
+                <Input
+                  value={signupData.phone}
+                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="Phone"
+                />
+                <Input
+                  type="password"
+                  value={signupData.password}
+                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Password"
+                  required
+                />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Sending OTP...' : 'Create Account & Continue'}
                 </Button>
@@ -263,28 +253,15 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
             {step === "otp" && (
               <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Enter OTP</Label>
-                  <Input
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="6-digit code"
-                  />
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={handleVerifyOtp}
-                  disabled={loading}
-                >
+                <Input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
+                />
+                <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP & Create Account"}
                 </Button>
-
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setStep("signup")}
-                >
+                <Button variant="ghost" onClick={() => setStep("signup")} className="w-full">
                   Go Back
                 </Button>
               </div>
