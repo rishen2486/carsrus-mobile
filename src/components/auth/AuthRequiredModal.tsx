@@ -60,8 +60,10 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
+      const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       console.log("🚀 Sending OTP...");
-      console.log("KEY:", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      console.log("API KEY:", API_KEY);
 
       const res = await fetch(
         "https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler",
@@ -69,7 +71,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            "Authorization": `Bearer ${API_KEY}`,
+            "apikey": API_KEY, // ✅ CRITICAL FIX
           },
           body: JSON.stringify({
             action: "send",
@@ -112,6 +115,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
+      const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       console.log("🔐 Verifying OTP...");
 
       const res = await fetch(
@@ -120,7 +125,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            "Authorization": `Bearer ${API_KEY}`,
+            "apikey": API_KEY, // ✅ CRITICAL FIX
           },
           body: JSON.stringify({
             action: "verify",
@@ -137,7 +143,6 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
         throw new Error(data.error || "Invalid OTP");
       }
 
-      // Create user after OTP success
       const { error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
@@ -195,20 +200,10 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
           {/* SIGN IN */}
           <TabsContent value="signin">
             <form onSubmit={handleLogin} className="space-y-4 pt-2">
-              <Input
-                type="email"
-                value={loginData.email}
-                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))}
-                placeholder="Email"
-                required
-              />
-              <Input
-                type="password"
-                value={loginData.password}
-                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))}
-                placeholder="Password"
-                required
-              />
+              <Input type="email" value={loginData.email}
+                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))} placeholder="Email" required />
+              <Input type="password" value={loginData.password}
+                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))} placeholder="Password" required />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
@@ -220,31 +215,14 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
             {step === "signup" && (
               <form onSubmit={handleSignup} className="space-y-4 pt-2">
-                <Input
-                  value={signupData.name}
-                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Full Name"
-                  required
-                />
-                <Input
-                  type="email"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))}
-                  placeholder="Email"
-                  required
-                />
-                <Input
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))}
-                  placeholder="Phone"
-                />
-                <Input
-                  type="password"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Password"
-                  required
-                />
+                <Input value={signupData.name}
+                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))} placeholder="Full Name" required />
+                <Input type="email" value={signupData.email}
+                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))} placeholder="Email" required />
+                <Input value={signupData.phone}
+                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))} placeholder="Phone" />
+                <Input type="password" value={signupData.password}
+                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))} placeholder="Password" required />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Sending OTP...' : 'Create Account & Continue'}
                 </Button>
@@ -253,11 +231,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
             {step === "otp" && (
               <div className="space-y-4 pt-2">
-                <Input
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter 6-digit OTP"
-                />
+                <Input value={otp}
+                  onChange={(e) => setOtp(e.target.value)} placeholder="Enter 6-digit OTP" />
                 <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP & Create Account"}
                 </Button>
