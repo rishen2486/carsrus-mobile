@@ -59,7 +59,8 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
       const res = await fetch("https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           action: "send",
