@@ -60,6 +60,16 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   // =========================
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!API_KEY) {
+      toast({
+        title: "Config Error",
+        description: "Missing API Key (VITE_SUPABASE_PUBLISHABLE_KEY)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -70,19 +80,19 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": API_KEY,                      // ✅ REQUIRED
-          "Authorization": `Bearer ${API_KEY}`,   // ✅ REQUIRED
+          "apikey": API_KEY,                    // ✅ REQUIRED
+          "Authorization": `Bearer ${API_KEY}`, // ✅ REQUIRED
         },
         body: JSON.stringify({
           action: "send",
-          email: signupData.email,
+          email: signupData.email.trim(),
         }),
       });
 
       const data = await res.json();
       console.log("OTP RESPONSE:", data);
 
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         throw new Error(data.error || "Failed to send OTP");
       }
 
@@ -98,7 +108,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
       toast({
         title: "Error",
-        description: err.message,
+        description: err.message || "Failed to send OTP",
         variant: "destructive",
       });
     }
@@ -110,6 +120,24 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   // VERIFY OTP → CREATE USER
   // =========================
   const handleVerifyOtp = async () => {
+    if (!API_KEY) {
+      toast({
+        title: "Config Error",
+        description: "Missing API Key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!otp.trim()) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the OTP",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -119,12 +147,12 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": API_KEY,                      // ✅ REQUIRED
-          "Authorization": `Bearer ${API_KEY}`,   // ✅ REQUIRED
+          "apikey": API_KEY,                    // ✅ REQUIRED
+          "Authorization": `Bearer ${API_KEY}`, // ✅ REQUIRED
         },
         body: JSON.stringify({
           action: "verify",
-          email: signupData.email,
+          email: signupData.email.trim(),
           otp: otp.trim(),
         }),
       });
@@ -132,10 +160,11 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
       const data = await res.json();
       console.log("VERIFY RESPONSE:", data);
 
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         throw new Error(data.error || "Invalid OTP");
       }
 
+      // ✅ CREATE USER AFTER OTP VERIFIED
       const { error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
@@ -162,7 +191,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
       toast({
         title: "Verification Failed",
-        description: err.message,
+        description: err.message || "OTP verification failed",
         variant: "destructive",
       });
     }
@@ -193,10 +222,20 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
           {/* SIGN IN */}
           <TabsContent value="signin">
             <form onSubmit={handleLogin} className="space-y-4 pt-2">
-              <Input type="email" value={loginData.email}
-                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))} required />
-              <Input type="password" value={loginData.password}
-                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))} required />
+              <Input
+                type="email"
+                placeholder="Email"
+                value={loginData.email}
+                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={loginData.password}
+                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))}
+                required
+              />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
@@ -208,14 +247,31 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
             {step === "signup" && (
               <form onSubmit={handleSignup} className="space-y-4 pt-2">
-                <Input value={signupData.name}
-                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))} required />
-                <Input type="email" value={signupData.email}
-                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))} required />
-                <Input value={signupData.phone}
-                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))} />
-                <Input type="password" value={signupData.password}
-                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))} required />
+                <Input
+                  placeholder="Full Name"
+                  value={signupData.name}
+                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))}
+                  required
+                />
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))}
+                  required
+                />
+                <Input
+                  placeholder="Phone"
+                  value={signupData.phone}
+                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))}
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={signupData.password}
+                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))}
+                  required
+                />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Sending OTP...' : 'Create Account & Continue'}
                 </Button>
@@ -224,7 +280,11 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
             {step === "otp" && (
               <div className="space-y-4 pt-2">
-                <Input value={otp} onChange={(e) => setOtp(e.target.value)} />
+                <Input
+                  placeholder="Enter 6-digit OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
                 <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP & Create Account"}
                 </Button>
