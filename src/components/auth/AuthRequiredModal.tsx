@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, Loader2, LogIn, MailCheck, UserPlus } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import {
+  sendSignupVerification,
+  validatePhoneNumber,
+  verifySignupOtp,
+} from '@/lib/auth/signupVerification';
 
 interface AuthRequiredModalProps {
   isOpen: boolean;
@@ -23,8 +29,13 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   const [step, setStep] = useState<'signup' | 'otp'>('signup');
   const [otp, setOtp] = useState('');
 
-  const API_URL = "https://pjxhbjaqtwjmbqfpurcp.supabase.co/functions/v1/otp-handler";
-  const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  useEffect(() => {
+    if (!isOpen) {
+      setLoading(false);
+      setStep('signup');
+      setOtp('');
+    }
+  }, [isOpen]);
 
   // =========================
   // LOGIN
@@ -61,11 +72,29 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!API_KEY) {
+    if (!signupData.name || !signupData.email || !signupData.password || !signupData.phone) {
       toast({
-        title: "Config Error",
-        description: "Missing API Key (VITE_SUPABASE_PUBLISHABLE_KEY)",
+        title: 'Missing Details',
+        description: 'Please complete all signup fields before continuing.',
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validatePhoneNumber(signupData.phone)) {
+      toast({
+        title: 'Invalid Phone Number',
+        description: 'Please enter a valid international phone number (e.g., +230xxxxxxxx).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (signupData.password.length < 6) {
+      toast({
+        title: 'Password Too Short',
+        description: 'Password must be at least 6 characters long.',
+        variant: 'destructive',
       });
       return;
     }
@@ -73,39 +102,26 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
-      console.log("🚀 Sending OTP...");
-      console.log("API KEY:", API_KEY);
+      const redirectUrl = new URL(window.location.href);
+      redirectUrl.searchParams.set('auth_verified', '1');
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": API_KEY,                    // ✅ REQUIRED
-          "Authorization": `Bearer ${API_KEY}`, // ✅ REQUIRED
-        },
-        body: JSON.stringify({
-          action: "send",
-          email: signupData.email.trim(),
-        }),
+      await sendSignupVerification({
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        telephoneNumber: signupData.phone,
+        redirectTo: redirectUrl.toString(),
       });
-
-      const data = await res.json();
-      console.log("OTP RESPONSE:", data);
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to send OTP");
-      }
 
       toast({
         title: "OTP Sent",
-        description: "Check your email for the verification code",
+        description: "Check your email for the OTP code and the magic link.",
       });
 
       setStep("otp");
+      setOtp('');
 
     } catch (err: any) {
-      console.error("❌ SEND OTP ERROR:", err);
-
       toast({
         title: "Error",
         description: err.message || "Failed to send OTP",
@@ -120,19 +136,10 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   // VERIFY OTP → CREATE USER
   // =========================
   const handleVerifyOtp = async () => {
-    if (!API_KEY) {
-      toast({
-        title: "Config Error",
-        description: "Missing API Key",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!otp.trim()) {
+    if (otp.trim().length !== 6) {
       toast({
         title: "Invalid OTP",
-        description: "Please enter the OTP",
+        description: "Please enter the 6-digit OTP",
         variant: "destructive",
       });
       return;
@@ -141,54 +148,21 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(true);
 
     try {
-      console.log("🔐 Verifying OTP...");
-
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": API_KEY,                    // ✅ REQUIRED
-          "Authorization": `Bearer ${API_KEY}`, // ✅ REQUIRED
-        },
-        body: JSON.stringify({
-          action: "verify",
-          email: signupData.email.trim(),
-          otp: otp.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      console.log("VERIFY RESPONSE:", data);
-
-      if (!res.ok) {
-        throw new Error(data.error || "Invalid OTP");
-      }
-
-      // ✅ CREATE USER AFTER OTP VERIFIED
-      const { error } = await supabase.auth.signUp({
+      await verifySignupOtp({
         email: signupData.email,
-        password: signupData.password,
-        options: {
-          data: {
-            name: signupData.name,
-            full_name: signupData.name,
-            telephone_number: signupData.phone,
-          },
-        },
+        otp,
+        name: signupData.name,
+        telephoneNumber: signupData.phone,
       });
-
-      if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Account created successfully!",
+        description: "Account created and verified successfully!",
       });
 
       onAuthenticated();
 
     } catch (err: any) {
-      console.error("❌ VERIFY ERROR:", err);
-
       toast({
         title: "Verification Failed",
         description: err.message || "OTP verification failed",
@@ -264,6 +238,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
                   placeholder="Phone"
                   value={signupData.phone}
                   onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))}
+                  required
                 />
                 <Input
                   type="password"
@@ -273,22 +248,60 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
                   required
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Sending OTP...' : 'Create Account & Continue'}
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending OTP...
+                    </span>
+                  ) : 'Create Account & Continue'}
                 </Button>
               </form>
             )}
 
             {step === "otp" && (
               <div className="space-y-4 pt-2">
-                <Input
-                  placeholder="Enter 6-digit OTP"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
-                <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
-                  {loading ? "Verifying..." : "Verify OTP & Create Account"}
+                <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
+                    <MailCheck className="mt-0.5 h-5 w-5 text-primary" />
+                    <p>
+                      We sent a 6-digit OTP and a magic link to <span className="font-medium text-foreground">{signupData.email}</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center py-2">
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={setOtp}
+                    containerClassName="justify-center"
+                  >
+                    <InputOTPGroup>
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <InputOTPSlot key={index} index={index} />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+
+                <Button onClick={handleVerifyOtp} className="w-full" disabled={loading || otp.trim().length !== 6}>
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : "Verify OTP & Create Account"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleSignup({ preventDefault: () => {} } as React.FormEvent)}
+                  className="w-full"
+                  disabled={loading}
+                >
+                  Resend OTP & Magic Link
                 </Button>
                 <Button variant="ghost" onClick={() => setStep("signup")} className="w-full">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
                   Go Back
                 </Button>
               </div>
