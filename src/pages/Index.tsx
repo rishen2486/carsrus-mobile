@@ -8,8 +8,8 @@ import CarCard from "@/components/cars/CarCard";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ContactSection from "@/components/contact/ContactSection";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,6 @@ interface Car {
 
 const Index = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
@@ -38,17 +37,6 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string>("Mauritius");
   const { toast } = useToast();
-
-  // Handle scroll-to from navigation state
-  useEffect(() => {
-    const state = location.state as { scrollTo?: string } | null;
-    if (state?.scrollTo) {
-      setTimeout(() => {
-        document.getElementById(state.scrollTo!)?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
 
   // Fetch all cars
   useEffect(() => {
@@ -263,8 +251,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <ContactSection />
 
       {/* Booking Form Modal */}
       <Dialog open={isBookingFormOpen} onOpenChange={setIsBookingFormOpen}>
