@@ -193,36 +193,21 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col space-y-4">
-              {navLinks.map((link) => {
-                const isHash = link.href.includes("#");
-                const handleClick = isHash
-                  ? (e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setIsMobileMenuOpen(false);
-                      const hash = link.href.split("#")[1];
-                      if (location.pathname !== "/") {
-                        navigate("/", { state: { scrollTo: hash } });
-                      } else {
-                        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }
-                  : () => setIsMobileMenuOpen(false);
-                return (
-                  <Link
-                    key={link.href}
-                    to={isHash ? "/" : link.href}
-                    className={cn(
-                      "text-sm font-medium transition-colors duration-200 px-4 py-2 rounded-lg",
-                      isActive(link.href)
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
-                    onClick={handleClick}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors duration-200 px-4 py-2 rounded-lg",
+                    isActive(link.href)
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
               <div className="border-t border-border/50 pt-4 px-4 space-y-3">
                 {profile ? (
                   <>
