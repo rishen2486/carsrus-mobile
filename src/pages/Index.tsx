@@ -30,6 +30,7 @@ interface Car {
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
@@ -37,6 +38,17 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string>("Mauritius");
   const { toast } = useToast();
+
+  // Handle scroll-to from navigation state
+  useEffect(() => {
+    const state = location.state as { scrollTo?: string } | null;
+    if (state?.scrollTo) {
+      setTimeout(() => {
+        document.getElementById(state.scrollTo!)?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Fetch all cars
   useEffect(() => {
