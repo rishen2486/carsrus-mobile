@@ -94,7 +94,7 @@ const Navbar = () => {
     { href: "/tours", label: "Tours" },
     { href: "/attractions", label: "Attractions" },
     { href: "/about", label: "About" },
-    { href: "/#contact", label: "Contact" },
+    { href: "/contact", label: "Contact" },
   ];
 
   return (
