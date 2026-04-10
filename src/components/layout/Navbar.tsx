@@ -94,7 +94,7 @@ const Navbar = () => {
     { href: "/tours", label: "Tours" },
     { href: "/attractions", label: "Attractions" },
     { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
+    { href: "/#contact", label: "Contact" },
   ];
 
   return (
@@ -109,23 +109,38 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  "text-base font-medium transition-colors duration-200 relative",
-                  isActive(link.href)
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {link.label}
-                {isActive(link.href) && (
-                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-primary rounded-full" />
-                )}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isHash = link.href.includes("#");
+              const handleClick = isHash
+                ? (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    const hash = link.href.split("#")[1];
+                    if (location.pathname !== "/") {
+                      navigate("/" , { state: { scrollTo: hash } });
+                    } else {
+                      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }
+                : undefined;
+              return (
+                <Link
+                  key={link.href}
+                  to={isHash ? "/" : link.href}
+                  onClick={handleClick}
+                  className={cn(
+                    "text-base font-medium transition-colors duration-200 relative",
+                    isActive(link.href)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {link.label}
+                  {isActive(link.href) && (
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Desktop Actions */}
@@ -193,21 +208,36 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    "text-sm font-medium transition-colors duration-200 px-4 py-2 rounded-lg",
-                    isActive(link.href)
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isHash = link.href.includes("#");
+                const handleClick = isHash
+                  ? (e: React.MouseEvent) => {
+                      e.preventDefault();
+                      setIsMobileMenuOpen(false);
+                      const hash = link.href.split("#")[1];
+                      if (location.pathname !== "/") {
+                        navigate("/", { state: { scrollTo: hash } });
+                      } else {
+                        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }
+                  : () => setIsMobileMenuOpen(false);
+                return (
+                  <Link
+                    key={link.href}
+                    to={isHash ? "/" : link.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors duration-200 px-4 py-2 rounded-lg",
+                      isActive(link.href)
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                    onClick={handleClick}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
               <div className="border-t border-border/50 pt-4 px-4 space-y-3">
                 {profile ? (
                   <>
