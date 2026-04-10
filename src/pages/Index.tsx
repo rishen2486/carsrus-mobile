@@ -8,6 +8,7 @@ import CarCard from "@/components/cars/CarCard";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ContactSection from "@/components/contact/ContactSection";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -249,6 +250,9 @@ const Index = () => {
           </Button>
         </div>
       </section>
+
+      {/* Contact Section */}
+      <ContactSection />
 
       {/* Booking Form Modal */}
       <Dialog open={isBookingFormOpen} onOpenChange={setIsBookingFormOpen}>
