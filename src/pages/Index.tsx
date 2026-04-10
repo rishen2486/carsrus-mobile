@@ -263,8 +263,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <ContactSection />
 
       {/* Booking Form Modal */}
       <Dialog open={isBookingFormOpen} onOpenChange={setIsBookingFormOpen}>
