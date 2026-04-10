@@ -109,23 +109,38 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  "text-base font-medium transition-colors duration-200 relative",
-                  isActive(link.href)
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {link.label}
-                {isActive(link.href) && (
-                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-primary rounded-full" />
-                )}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isHash = link.href.includes("#");
+              const handleClick = isHash
+                ? (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    const hash = link.href.split("#")[1];
+                    if (location.pathname !== "/") {
+                      navigate("/" , { state: { scrollTo: hash } });
+                    } else {
+                      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }
+                : undefined;
+              return (
+                <Link
+                  key={link.href}
+                  to={isHash ? "/" : link.href}
+                  onClick={handleClick}
+                  className={cn(
+                    "text-base font-medium transition-colors duration-200 relative",
+                    isActive(link.href)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {link.label}
+                  {isActive(link.href) && (
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Desktop Actions */}
