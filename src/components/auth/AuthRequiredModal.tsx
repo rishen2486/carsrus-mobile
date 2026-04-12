@@ -29,19 +29,36 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   const [step, setStep] = useState<'signup' | 'otp'>('signup');
   const [otp, setOtp] = useState('');
 
+  // 🚀 NEW: cooldown to prevent spam
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   useEffect(() => {
     if (!isOpen) {
       setLoading(false);
       setStep('signup');
       setOtp('');
+      setResendCooldown(0);
     }
   }, [isOpen]);
+
+  // countdown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // =========================
   // LOGIN
   // =========================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
 
     try {
@@ -71,11 +88,12 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   // =========================
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
 
     if (!signupData.name || !signupData.email || !signupData.password || !signupData.phone) {
       toast({
         title: 'Missing Details',
-        description: 'Please complete all signup fields before continuing.',
+        description: 'Please complete all signup fields.',
         variant: "destructive",
       });
       return;
@@ -84,7 +102,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     if (!validatePhoneNumber(signupData.phone)) {
       toast({
         title: 'Invalid Phone Number',
-        description: 'Please enter a valid international phone number (e.g., +230xxxxxxxx).',
+        description: 'Use format +230xxxxxxxx',
         variant: 'destructive',
       });
       return;
@@ -93,7 +111,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     if (signupData.password.length < 6) {
       toast({
         title: 'Password Too Short',
-        description: 'Password must be at least 6 characters long.',
+        description: 'Minimum 6 characters.',
         variant: 'destructive',
       });
       return;
@@ -115,11 +133,14 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
       toast({
         title: "OTP Sent",
-        description: "Check your email for the OTP code and the magic link.",
+        description: "Check your email for OTP.",
       });
 
       setStep("otp");
       setOtp('');
+
+      // 🚀 start cooldown (30 seconds)
+      setResendCooldown(30);
 
     } catch (err: any) {
       toast({
@@ -133,13 +154,15 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
   };
 
   // =========================
-  // VERIFY OTP → CREATE USER
+  // VERIFY OTP
   // =========================
   const handleVerifyOtp = async () => {
+    if (loading) return;
+
     if (otp.trim().length !== 6) {
       toast({
         title: "Invalid OTP",
-        description: "Please enter the 6-digit OTP",
+        description: "Enter 6-digit code",
         variant: "destructive",
       });
       return;
@@ -157,7 +180,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
       toast({
         title: "Success",
-        description: "Account created and verified successfully!",
+        description: "Account created successfully!",
       });
 
       onAuthenticated();
@@ -165,7 +188,7 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     } catch (err: any) {
       toast({
         title: "Verification Failed",
-        description: err.message || "OTP verification failed",
+        description: err.message || "OTP failed",
         variant: "destructive",
       });
     }
@@ -173,43 +196,35 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
     setLoading(false);
   };
 
+  // =========================
+  // RESEND OTP (SAFE)
+  // =========================
+  const handleResend = async () => {
+    if (resendCooldown > 0 || loading) return;
+
+    await handleSignup({ preventDefault: () => {} } as React.FormEvent);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">Sign In Required</DialogTitle>
-          <p className="text-center text-sm text-muted-foreground">
-            Please sign in or create an account to complete your booking.
-          </p>
         </DialogHeader>
 
-        <Tabs defaultValue="signin" className="w-full">
+        <Tabs defaultValue="signin">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">
-              <LogIn className="h-4 w-4" /> Sign In
-            </TabsTrigger>
-            <TabsTrigger value="signup">
-              <UserPlus className="h-4 w-4" /> Sign Up
-            </TabsTrigger>
+            <TabsTrigger value="signin"><LogIn className="h-4 w-4" /> Sign In</TabsTrigger>
+            <TabsTrigger value="signup"><UserPlus className="h-4 w-4" /> Sign Up</TabsTrigger>
           </TabsList>
 
           {/* SIGN IN */}
           <TabsContent value="signin">
             <form onSubmit={handleLogin} className="space-y-4 pt-2">
-              <Input
-                type="email"
-                placeholder="Email"
-                value={loginData.email}
-                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))}
-                required
-              />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={loginData.password}
-                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))}
-                required
-              />
+              <Input type="email" placeholder="Email" value={loginData.email}
+                onChange={(e) => setLoginData(p => ({ ...p, email: e.target.value }))} />
+              <Input type="password" placeholder="Password" value={loginData.password}
+                onChange={(e) => setLoginData(p => ({ ...p, password: e.target.value }))} />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
@@ -218,95 +233,57 @@ export function AuthRequiredModal({ isOpen, onClose, onAuthenticated }: AuthRequ
 
           {/* SIGN UP */}
           <TabsContent value="signup">
-
             {step === "signup" && (
               <form onSubmit={handleSignup} className="space-y-4 pt-2">
-                <Input
-                  placeholder="Full Name"
-                  value={signupData.name}
-                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))}
-                  required
-                />
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))}
-                  required
-                />
-                <Input
-                  placeholder="Phone"
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))}
-                  required
-                />
+                <Input placeholder="Full Name" value={signupData.name}
+                  onChange={(e) => setSignupData(p => ({ ...p, name: e.target.value }))} />
+                <Input type="email" placeholder="Email" value={signupData.email}
+                  onChange={(e) => setSignupData(p => ({ ...p, email: e.target.value }))} />
+                <Input placeholder="Phone" value={signupData.phone}
+                  onChange={(e) => setSignupData(p => ({ ...p, phone: e.target.value }))} />
+                <Input type="password" placeholder="Password" value={signupData.password}
+                  onChange={(e) => setSignupData(p => ({ ...p, password: e.target.value }))} />
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Sending OTP...
-                    </span>
-                  ) : 'Create Account & Continue'}
+                  {loading ? <Loader2 className="animate-spin" /> : 'Create Account'}
                 </Button>
               </form>
             )}
 
             {step === "otp" && (
               <div className="space-y-4 pt-2">
-                <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                  <div className="flex items-start gap-3">
-                    <MailCheck className="mt-0.5 h-5 w-5 text-primary" />
-                    <p>
-                      We sent a 6-digit OTP and a magic link to <span className="font-medium text-foreground">{signupData.email}</span>.
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-center">
+                  OTP sent to <b>{signupData.email}</b>
+                </p>
 
-                <div className="flex justify-center py-2">
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={setOtp}
-                    containerClassName="justify-center"
-                  >
-                    <InputOTPGroup>
-                      {Array.from({ length: 6 }).map((_, index) => (
-                        <InputOTPSlot key={index} index={index} />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
+                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
 
-                <Button onClick={handleVerifyOtp} className="w-full" disabled={loading || otp.trim().length !== 6}>
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Verifying...
-                    </span>
-                  ) : "Verify OTP & Create Account"}
+                <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="animate-spin" /> : "Verify OTP"}
                 </Button>
+
                 <Button
                   variant="outline"
-                  onClick={() => handleSignup({ preventDefault: () => {} } as React.FormEvent)}
+                  onClick={handleResend}
+                  disabled={resendCooldown > 0}
                   className="w-full"
-                  disabled={loading}
                 >
-                  Resend OTP & Magic Link
+                  {resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : "Resend OTP"}
                 </Button>
+
                 <Button variant="ghost" onClick={() => setStep("signup")} className="w-full">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Go Back
                 </Button>
               </div>
             )}
-
           </TabsContent>
         </Tabs>
       </DialogContent>
