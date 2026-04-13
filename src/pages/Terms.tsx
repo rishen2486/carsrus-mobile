@@ -180,11 +180,9 @@ const Terms = () => {
           <h2 className="text-xl font-semibold text-foreground mb-3">15. Contact</h2>
           <p className="text-muted-foreground">
             For any questions, please contact:<br />
-            Carsrus Ltd<br />
-            Royal Road<br />
-            Ripailles<br />
-            St Pierre<br />
-            <a href="mailto:carsrus88@outlook.com" className="text-primary hover:underline">carsrus88@outlook.com</a>
+            Company Name: Carsrus Ltd<br />
+            Tel: 55033736<br />
+            Email Address:<a href="mailto:carsrus88@outlook.com" className="text-primary hover:underline">carsrus88@outlook.com</a>
           </p>
         </section>
       </main>
