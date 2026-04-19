@@ -17,6 +17,8 @@ interface CarDetailsModalProps {
   onBookNow: () => void;
   actionLabel?: string;
   actionVariant?: "premium" | "destructive" | "default";
+  totalAmount?: number;
+  totalLabel?: string;
 }
 
 const FALLBACK_IMG =
@@ -29,6 +31,8 @@ const CarDetailsModal = ({
   onBookNow,
   actionLabel = "Book Now",
   actionVariant = "premium",
+  totalAmount,
+  totalLabel = "Total Paid",
 }: CarDetailsModalProps) => {
   const { formatPrice } = useCurrency();
 
@@ -51,14 +55,14 @@ const CarDetailsModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`${car.name} details`}
     >
       <div
-        className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto bg-card rounded-2xl shadow-2xl"
+        className="relative w-full max-w-4xl my-auto max-h-[92vh] overflow-y-auto bg-card rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close X */}
@@ -109,10 +113,19 @@ const CarDetailsModal = ({
               )}
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-primary">
-                {formatPrice(displayPrice)}
-                <span className="text-base font-normal text-muted-foreground">/day</span>
-              </div>
+              {totalAmount !== undefined ? (
+                <>
+                  <div className="text-sm text-muted-foreground">{totalLabel}</div>
+                  <div className="text-3xl font-bold text-primary">
+                    {formatPrice(totalAmount)}
+                  </div>
+                </>
+              ) : (
+                <div className="text-3xl font-bold text-primary">
+                  {formatPrice(displayPrice)}
+                  <span className="text-base font-normal text-muted-foreground">/day</span>
+                </div>
+              )}
               {car.rating && (
                 <div className="flex items-center gap-1 justify-end mt-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
