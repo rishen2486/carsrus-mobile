@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SearchBar, { SearchFilters } from "@/components/search/SearchBar";
 import CarCard from "@/components/cars/CarCard";
+import CarDetailsModal from "@/components/cars/CarDetailsModal";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -34,6 +35,7 @@ const Index = () => {
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string>("Mauritius");
   const { toast } = useToast();
@@ -85,6 +87,11 @@ const Index = () => {
   const handleBookNow = (car: Car) => {
     setSelectedCar(car);
     setIsBookingFormOpen(true);
+  };
+
+  const handleViewDetails = (car: Car) => {
+    setSelectedCar(car);
+    setIsDetailsOpen(true);
   };
 
   return (
@@ -164,7 +171,12 @@ const Index = () => {
               </div>
             ) : featuredCars.filter(car => car.country === selectedCountry).length > 0 ? (
               featuredCars.filter(car => car.country === selectedCountry).map((car) => (
-                <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
+                <CarCard
+                  key={car.id}
+                  car={car}
+                  onBookNow={() => handleBookNow(car)}
+                  onViewDetails={() => handleViewDetails(car)}
+                />
               ))
             ) : (
               <div className="col-span-full text-center py-8">
@@ -266,6 +278,14 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Car Details Modal */}
+      <CarDetailsModal
+        car={selectedCar}
+        open={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        onBookNow={() => setIsBookingFormOpen(true)}
+      />
 
       <Footer />
     </div>
