@@ -25,9 +25,10 @@ interface CarCardProps {
     features?: string[];
   };
   onBookNow?: () => void;
+  onViewDetails?: () => void;
 }
 
-const CarCard = ({ car, onBookNow }: CarCardProps) => {
+const CarCard = ({ car, onBookNow, onViewDetails }: CarCardProps) => {
   const { formatPrice } = useCurrency();
   
   // Handle both old and new data structures - check photos array first, then image_url, then image
