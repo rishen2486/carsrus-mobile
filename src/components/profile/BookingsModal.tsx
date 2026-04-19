@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import CarDetailsModal from "@/components/cars/CarDetailsModal";
+import { toast } from "@/hooks/use-toast";
 
 interface Booking {
   id: string;
@@ -23,10 +27,7 @@ interface Booking {
   payment_status: string | null;
   item_type: string | null;
   created_at: string | null;
-  cars?: {
-    name: string;
-    image_url: string | null;
-  } | null;
+  cars?: any | null;
 }
 
 interface BookingsModalProps {
@@ -38,6 +39,8 @@ interface BookingsModalProps {
 const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCar, setSelectedCar] = useState<any | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const { formatPrice } = useCurrency();
 
   useEffect(() => {
@@ -61,10 +64,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
           payment_status,
           item_type,
           created_at,
-          cars (
-            name,
-            image_url
-          )
+          cars (*)
         `)
         .eq("user_id", userId)
         .order("start_date", { ascending: false });
@@ -78,6 +78,23 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
     }
   };
 
+  const handleCardClick = (booking: Booking) => {
+    if (!booking.cars) {
+      toast({ title: "No car details available" });
+      return;
+    }
+    setSelectedCar(booking.cars);
+    setDetailsOpen(true);
+  };
+
+  const handleCancelBooking = () => {
+    toast({
+      title: "Cancellation requested",
+      description: "Your cancellation request has been noted. Our team will contact you shortly.",
+    });
+    setDetailsOpen(false);
+  };
+
   const currentBookings = bookings.filter(
     (booking) => !isPast(parseISO(booking.end_date))
   );
@@ -85,12 +102,23 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
     isPast(parseISO(booking.end_date))
   );
 
-  const BookingCard = ({ booking }: { booking: Booking }) => (
-    <div className="border rounded-lg p-4 space-y-3 bg-card">
+  const BookingCard = ({ booking, clickable = false }: { booking: Booking; clickable?: boolean }) => (
+    <div
+      className={`border rounded-lg p-4 space-y-3 bg-card transition-all ${
+        clickable ? "cursor-pointer hover:border-primary hover:shadow-md" : ""
+      }`}
+      onClick={clickable ? () => handleCardClick(booking) : undefined}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Car className="h-6 w-6 text-primary" />
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+            {booking.cars?.image_url ? (
+              <img src={booking.cars.image_url} alt={booking.cars?.name} className="h-full w-full object-cover" />
+            ) : (
+              <Car className="h-6 w-6 text-primary" />
+            )}
           </div>
           <div>
             <h4 className="font-medium">{booking.cars?.name || "Vehicle"}</h4>
@@ -173,7 +201,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
               ) : currentBookings.length > 0 ? (
                 <div className="space-y-4">
                   {currentBookings.map((booking) => (
-                    <BookingCard key={booking.id} booking={booking} />
+                    <BookingCard key={booking.id} booking={booking} clickable />
                   ))}
                 </div>
               ) : (
@@ -201,6 +229,15 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <CarDetailsModal
+        car={selectedCar}
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        onBookNow={handleCancelBooking}
+        actionLabel="Cancel Booking"
+        actionVariant="destructive"
+      />
     </Dialog>
   );
 };

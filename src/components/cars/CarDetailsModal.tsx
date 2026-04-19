@@ -15,12 +15,21 @@ interface CarDetailsModalProps {
   open: boolean;
   onClose: () => void;
   onBookNow: () => void;
+  actionLabel?: string;
+  actionVariant?: "premium" | "destructive" | "default";
 }
 
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1494976688153-9c302e0e1271?w=1200&h=800&fit=crop";
 
-const CarDetailsModal = ({ car, open, onClose, onBookNow }: CarDetailsModalProps) => {
+const CarDetailsModal = ({
+  car,
+  open,
+  onClose,
+  onBookNow,
+  actionLabel = "Book Now",
+  actionVariant = "premium",
+}: CarDetailsModalProps) => {
   const { formatPrice } = useCurrency();
 
   if (!open || !car) return null;
@@ -186,7 +195,7 @@ const CarDetailsModal = ({ car, open, onClose, onBookNow }: CarDetailsModalProps
           )}
 
           <Button
-            variant="premium"
+            variant={actionVariant}
             size="lg"
             className="w-full text-lg"
             onClick={() => {
@@ -194,7 +203,7 @@ const CarDetailsModal = ({ car, open, onClose, onBookNow }: CarDetailsModalProps
               onBookNow();
             }}
           >
-            Book Now
+            {actionLabel}
           </Button>
         </div>
       </div>
