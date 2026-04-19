@@ -171,7 +171,12 @@ const Index = () => {
               </div>
             ) : featuredCars.filter(car => car.country === selectedCountry).length > 0 ? (
               featuredCars.filter(car => car.country === selectedCountry).map((car) => (
-                <CarCard key={car.id} car={car} onBookNow={() => handleBookNow(car)} />
+                <CarCard
+                  key={car.id}
+                  car={car}
+                  onBookNow={() => handleBookNow(car)}
+                  onViewDetails={() => handleViewDetails(car)}
+                />
               ))
             ) : (
               <div className="col-span-full text-center py-8">
