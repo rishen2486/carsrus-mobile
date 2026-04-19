@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SearchBar, { SearchFilters } from "@/components/search/SearchBar";
 import CarCard from "@/components/cars/CarCard";
+import CarDetailsModal from "@/components/cars/CarDetailsModal";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
