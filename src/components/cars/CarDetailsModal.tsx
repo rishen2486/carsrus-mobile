@@ -17,6 +17,8 @@ interface CarDetailsModalProps {
   onBookNow: () => void;
   actionLabel?: string;
   actionVariant?: "premium" | "destructive" | "default";
+  totalAmount?: number;
+  totalLabel?: string;
 }
 
 const FALLBACK_IMG =
