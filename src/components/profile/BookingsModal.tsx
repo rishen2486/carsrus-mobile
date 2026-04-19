@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import CarDetailsModal from "@/components/cars/CarDetailsModal";
+import { toast } from "@/hooks/use-toast";
 
 interface Booking {
   id: string;
@@ -23,10 +27,7 @@ interface Booking {
   payment_status: string | null;
   item_type: string | null;
   created_at: string | null;
-  cars?: {
-    name: string;
-    image_url: string | null;
-  } | null;
+  cars?: any | null;
 }
 
 interface BookingsModalProps {
