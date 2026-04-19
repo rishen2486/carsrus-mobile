@@ -279,6 +279,14 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Car Details Modal */}
+      <CarDetailsModal
+        car={selectedCar}
+        open={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        onBookNow={() => setIsBookingFormOpen(true)}
+      />
+
       <Footer />
     </div>
   );
