@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SearchBar, { SearchFilters } from "@/components/search/SearchBar";
 import CarCard from "@/components/cars/CarCard";
+import CarDetailsModal from "@/components/cars/CarDetailsModal";
 import { BookingForm } from "@/components/BookingForm";
 import Navbar from "@/components/layout/Navbar";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,7 @@ const Cars = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
   const [sortBy, setSortBy] = useState("price");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -150,6 +152,11 @@ const Cars = () => {
   const handleBookNow = (car: Car) => {
     setSelectedCar(car);
     setIsBookingFormOpen(true);
+  };
+
+  const handleViewDetails = (car: Car) => {
+    setSelectedCar(car);
+    setIsDetailsOpen(true);
   };
 
   const filteredCars = cars.filter(car => {
@@ -317,10 +324,11 @@ const Cars = () => {
                   : "grid-cols-1"
               }`}>
                 {sortedCars.map((car) => (
-                  <CarCard 
-                    key={car.id} 
+                  <CarCard
+                    key={car.id}
                     car={car}
                     onBookNow={() => handleBookNow(car)}
+                    onViewDetails={() => handleViewDetails(car)}
                   />
                 ))}
               </div>
