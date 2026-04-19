@@ -39,7 +39,7 @@ interface BookingsModalProps {
 const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCar, setSelectedCar] = useState<any | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { formatPrice } = useCurrency();
 
@@ -83,7 +83,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
       toast({ title: "No car details available" });
       return;
     }
-    setSelectedCar(booking.cars);
+    setSelectedBooking(booking);
     setDetailsOpen(true);
   };
 
