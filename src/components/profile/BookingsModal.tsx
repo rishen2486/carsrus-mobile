@@ -229,6 +229,15 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <CarDetailsModal
+        car={selectedCar}
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        onBookNow={handleCancelBooking}
+        actionLabel="Cancel Booking"
+        actionVariant="destructive"
+      />
     </Dialog>
   );
 };
