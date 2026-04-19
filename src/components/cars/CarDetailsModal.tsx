@@ -113,10 +113,19 @@ const CarDetailsModal = ({
               )}
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-primary">
-                {formatPrice(displayPrice)}
-                <span className="text-base font-normal text-muted-foreground">/day</span>
-              </div>
+              {totalAmount !== undefined ? (
+                <>
+                  <div className="text-sm text-muted-foreground">{totalLabel}</div>
+                  <div className="text-3xl font-bold text-primary">
+                    {formatPrice(totalAmount)}
+                  </div>
+                </>
+              ) : (
+                <div className="text-3xl font-bold text-primary">
+                  {formatPrice(displayPrice)}
+                  <span className="text-base font-normal text-muted-foreground">/day</span>
+                </div>
+              )}
               {car.rating && (
                 <div className="flex items-center gap-1 justify-end mt-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
