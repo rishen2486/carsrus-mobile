@@ -173,72 +173,76 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            My Bookings
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              My Bookings
+            </DialogTitle>
+          </DialogHeader>
 
-        <Tabs defaultValue="current" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="current">
-              Current Bookings ({currentBookings.length})
-            </TabsTrigger>
-            <TabsTrigger value="past">
-              Past Bookings ({pastBookings.length})
-            </TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="current" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="current">
+                Current Bookings ({currentBookings.length})
+              </TabsTrigger>
+              <TabsTrigger value="past">
+                Past Bookings ({pastBookings.length})
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="current" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Clock className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : currentBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {currentBookings.map((booking) => (
-                    <BookingCard key={booking.id} booking={booking} clickable />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No current bookings. Book your next adventure!" />
-              )}
-            </ScrollArea>
-          </TabsContent>
+            <TabsContent value="current" className="mt-4">
+              <ScrollArea className="h-[400px] pr-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Clock className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : currentBookings.length > 0 ? (
+                  <div className="space-y-4">
+                    {currentBookings.map((booking) => (
+                      <BookingCard key={booking.id} booking={booking} clickable />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No current bookings. Book your next adventure!" />
+                )}
+              </ScrollArea>
+            </TabsContent>
 
-          <TabsContent value="past" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Clock className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : pastBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {pastBookings.map((booking) => (
-                    <BookingCard key={booking.id} booking={booking} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No past bookings yet." />
-              )}
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
+            <TabsContent value="past" className="mt-4">
+              <ScrollArea className="h-[400px] pr-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Clock className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : pastBookings.length > 0 ? (
+                  <div className="space-y-4">
+                    {pastBookings.map((booking) => (
+                      <BookingCard key={booking.id} booking={booking} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No past bookings yet." />
+                )}
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
 
       <CarDetailsModal
-        car={selectedCar}
+        car={selectedBooking?.cars || null}
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
         onBookNow={handleCancelBooking}
         actionLabel="Cancel Booking"
         actionVariant="destructive"
+        totalAmount={selectedBooking?.total_amount}
+        totalLabel="Total Paid"
       />
-    </Dialog>
+    </>
   );
 };
 
