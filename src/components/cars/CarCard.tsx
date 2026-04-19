@@ -39,14 +39,22 @@ const CarCard = ({ car, onBookNow, onViewDetails }: CarCardProps) => {
   const displayPrice = car.price_publish || (car.price_per_day ? car.price_per_day + 100 : car.pricePerDay ? car.pricePerDay + 100 : 199);
   const features = car.features || [];
   
-  const handleBookNow = () => {
+  const handleBookNow = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (onBookNow) {
       onBookNow();
     }
   };
 
+  const handleCardClick = () => {
+    if (onViewDetails) onViewDetails();
+  };
+
   return (
-    <Card className="car-card overflow-hidden group">
+    <Card
+      className="car-card overflow-hidden group cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="relative overflow-hidden">
         <img
           src={imageUrl}
