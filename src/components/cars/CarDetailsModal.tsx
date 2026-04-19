@@ -31,6 +31,8 @@ const CarDetailsModal = ({
   onBookNow,
   actionLabel = "Book Now",
   actionVariant = "premium",
+  totalAmount,
+  totalLabel = "Total Paid",
 }: CarDetailsModalProps) => {
   const { formatPrice } = useCurrency();
 
