@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { X, Users, Gauge, Fuel, Briefcase, MapPin, Star } from "lucide-react";
 import {
   Carousel,
@@ -53,9 +54,9 @@ const CarDetailsModal = ({
 
   const features: string[] = car.features || [];
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in overflow-y-auto"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -220,7 +221,8 @@ const CarDetailsModal = ({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
