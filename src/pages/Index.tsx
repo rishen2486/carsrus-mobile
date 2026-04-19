@@ -35,6 +35,7 @@ const Index = () => {
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string>("Mauritius");
   const { toast } = useToast();
@@ -86,6 +87,11 @@ const Index = () => {
   const handleBookNow = (car: Car) => {
     setSelectedCar(car);
     setIsBookingFormOpen(true);
+  };
+
+  const handleViewDetails = (car: Car) => {
+    setSelectedCar(car);
+    setIsDetailsOpen(true);
   };
 
   return (
