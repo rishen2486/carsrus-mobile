@@ -102,12 +102,23 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
     isPast(parseISO(booking.end_date))
   );
 
-  const BookingCard = ({ booking }: { booking: Booking }) => (
-    <div className="border rounded-lg p-4 space-y-3 bg-card">
+  const BookingCard = ({ booking, clickable = false }: { booking: Booking; clickable?: boolean }) => (
+    <div
+      className={`border rounded-lg p-4 space-y-3 bg-card transition-all ${
+        clickable ? "cursor-pointer hover:border-primary hover:shadow-md" : ""
+      }`}
+      onClick={clickable ? () => handleCardClick(booking) : undefined}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Car className="h-6 w-6 text-primary" />
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+            {booking.cars?.image_url ? (
+              <img src={booking.cars.image_url} alt={booking.cars?.name} className="h-full w-full object-cover" />
+            ) : (
+              <Car className="h-6 w-6 text-primary" />
+            )}
           </div>
           <div>
             <h4 className="font-medium">{booking.cars?.name || "Vehicle"}</h4>
