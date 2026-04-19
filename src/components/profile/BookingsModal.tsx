@@ -201,7 +201,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
               ) : currentBookings.length > 0 ? (
                 <div className="space-y-4">
                   {currentBookings.map((booking) => (
-                    <BookingCard key={booking.id} booking={booking} />
+                    <BookingCard key={booking.id} booking={booking} clickable />
                   ))}
                 </div>
               ) : (
