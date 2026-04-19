@@ -39,6 +39,8 @@ interface BookingsModalProps {
 const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCar, setSelectedCar] = useState<any | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const { formatPrice } = useCurrency();
 
   useEffect(() => {
@@ -62,10 +64,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
           payment_status,
           item_type,
           created_at,
-          cars (
-            name,
-            image_url
-          )
+          cars (*)
         `)
         .eq("user_id", userId)
         .order("start_date", { ascending: false });
@@ -77,6 +76,23 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCardClick = (booking: Booking) => {
+    if (!booking.cars) {
+      toast({ title: "No car details available" });
+      return;
+    }
+    setSelectedCar(booking.cars);
+    setDetailsOpen(true);
+  };
+
+  const handleCancelBooking = () => {
+    toast({
+      title: "Cancellation requested",
+      description: "Your cancellation request has been noted. Our team will contact you shortly.",
+    });
+    setDetailsOpen(false);
   };
 
   const currentBookings = bookings.filter(
