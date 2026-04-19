@@ -195,7 +195,7 @@ const CarDetailsModal = ({
           )}
 
           <Button
-            variant="premium"
+            variant={actionVariant}
             size="lg"
             className="w-full text-lg"
             onClick={() => {
@@ -203,7 +203,7 @@ const CarDetailsModal = ({
               onBookNow();
             }}
           >
-            Book Now
+            {actionLabel}
           </Button>
         </div>
       </div>
