@@ -13,7 +13,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import CarDetailsModal from "@/components/cars/CarDetailsModal";
 import { toast } from "@/hooks/use-toast";
 
@@ -48,6 +47,23 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
       fetchBookings();
     }
   }, [open, userId]);
+
+  // ✅ TOKEN FUNCTION (ADDED)
+  const getToken = async () => {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error("Error getting session:", error);
+      return;
+    }
+
+    console.log("ACCESS TOKEN:", data.session?.access_token);
+
+    toast({
+      title: "Token logged",
+      description: "Check your browser console (F12)",
+    });
+  };
 
   const fetchBookings = async () => {
     try {
@@ -90,7 +106,7 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
   const handleCancelBooking = () => {
     toast({
       title: "Cancellation requested",
-      description: "Your cancellation request has been noted. Our team will contact you shortly.",
+      description: "Your cancellation request has been noted.",
     });
     setDetailsOpen(false);
   };
@@ -108,14 +124,12 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
         clickable ? "cursor-pointer hover:border-primary hover:shadow-md" : ""
       }`}
       onClick={clickable ? () => handleCardClick(booking) : undefined}
-      role={clickable ? "button" : undefined}
-      tabIndex={clickable ? 0 : undefined}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
             {booking.cars?.image_url ? (
-              <img src={booking.cars.image_url} alt={booking.cars?.name} className="h-full w-full object-cover" />
+              <img src={booking.cars.image_url} alt="" className="h-full w-full object-cover" />
             ) : (
               <Car className="h-6 w-6 text-primary" />
             )}
@@ -127,48 +141,15 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
             </p>
           </div>
         </div>
-        <Badge
-          variant={
-            booking.payment_status === "completed"
-              ? "default"
-              : booking.payment_status === "pending"
-              ? "secondary"
-              : "outline"
-          }
-        >
+        <Badge>
           {booking.payment_status || "Pending"}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>
-            {format(parseISO(booking.start_date), "MMM d")} -{" "}
-            {format(parseISO(booking.end_date), "MMM d, yyyy")}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          <span className="truncate">{booking.pickup_location}</span>
-        </div>
+      <div className="flex justify-between pt-2 border-t">
+        <span>Total</span>
+        <span>{formatPrice(booking.total_amount)}</span>
       </div>
-
-      <div className="flex items-center justify-between pt-2 border-t">
-        <span className="text-sm text-muted-foreground">Total Amount</span>
-        <span className="font-semibold text-primary">
-          {formatPrice(booking.total_amount)}
-        </span>
-      </div>
-    </div>
-  );
-
-  const EmptyState = ({ message }: { message: string }) => (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-        <Calendar className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <p className="text-muted-foreground">{message}</p>
     </div>
   );
 
@@ -176,56 +157,45 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               My Bookings
             </DialogTitle>
+
+            {/* ✅ BUTTON ADDED HERE */}
+            <Button size="sm" variant="outline" onClick={getToken}>
+              Get Token
+            </Button>
           </DialogHeader>
 
           <Tabs defaultValue="current" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="current">
-                Current Bookings ({currentBookings.length})
+                Current ({currentBookings.length})
               </TabsTrigger>
               <TabsTrigger value="past">
-                Past Bookings ({pastBookings.length})
+                Past ({pastBookings.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="current" className="mt-4">
               <ScrollArea className="h-[400px] pr-4">
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Clock className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : currentBookings.length > 0 ? (
-                  <div className="space-y-4">
-                    {currentBookings.map((booking) => (
-                      <BookingCard key={booking.id} booking={booking} clickable />
-                    ))}
-                  </div>
+                  <Clock className="h-6 w-6 animate-spin text-primary" />
                 ) : (
-                  <EmptyState message="No current bookings. Book your next adventure!" />
+                  currentBookings.map((b) => (
+                    <BookingCard key={b.id} booking={b} clickable />
+                  ))
                 )}
               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="past" className="mt-4">
               <ScrollArea className="h-[400px] pr-4">
-                {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Clock className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : pastBookings.length > 0 ? (
-                  <div className="space-y-4">
-                    {pastBookings.map((booking) => (
-                      <BookingCard key={booking.id} booking={booking} />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState message="No past bookings yet." />
-                )}
+                {pastBookings.map((b) => (
+                  <BookingCard key={b.id} booking={b} />
+                ))}
               </ScrollArea>
             </TabsContent>
           </Tabs>
@@ -240,7 +210,6 @@ const BookingsModal = ({ open, onOpenChange, userId }: BookingsModalProps) => {
         actionLabel="Cancel Booking"
         actionVariant="destructive"
         totalAmount={selectedBooking?.total_amount}
-        totalLabel="Total Paid"
       />
     </>
   );
